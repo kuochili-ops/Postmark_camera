@@ -3,49 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Anti-Freeze</title>
+    <title>Stamp Pro - Final Fix</title>
     <style>
         :root { --cx: 50%; --cy: 50%; --cr: 75px; --accent: #00ffff; }
         body { margin: 0; background: #000; overflow: hidden; font-family: -apple-system, sans-serif; height: 100dvh; display: flex; flex-direction: column; color: white; }
         
-        .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 1000; }
+        .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 2000; }
         .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
 
         .page { display: none; flex: 1; position: relative; overflow: hidden; flex-direction: column; }
         .page.active { display: flex; }
 
+        /* 視景與圓框 */
         #viewport { flex: 1; position: relative; background: #000; overflow: hidden; }
         #bg-video { width: 100%; height: 100%; object-fit: cover; }
         #guide-overlay { position: absolute; inset: 0; z-index: 100; pointer-events: none; background: rgba(0, 0, 0, 0.4); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
         #guide-border { position: absolute; width: calc(var(--cr) * 2); height: calc(var(--cr) * 2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; z-index: 101; pointer-events: none; }
 
-        /* UI 面板強制層級 */
-        .ui-panel { background: #000; padding: 15px 0; padding-bottom: calc(15px + env(safe-area-inset-bottom)); border-top: 1px solid #333; flex-shrink: 0; z-index: 2000; }
+        /* UI 控制面板 */
+        .ui-panel { background: #000; padding: 15px 0; padding-bottom: calc(15px + env(safe-area-inset-bottom)); border-top: 1px solid #333; flex-shrink: 0; z-index: 2100; }
         .ui-content { display: flex; justify-content: space-around; align-items: center; width: 100%; }
-        .circle-btn { width: 45px; height: 45px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #444; font-size: 18px; }
-        #shutter-btn { width: 65px; height: 65px; border: 5px solid #fff; background: #f00; border-radius: 50%; }
+        .circle-btn { width: 50px; height: 50px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #444; font-size: 20px; }
+        #shutter-btn { width: 70px; height: 70px; border: 5px solid #fff; background: #f00; border-radius: 50%; }
 
-        #edit-stage { flex: 1; position: relative; background: #111; display: flex; align-items: center; justify-content: center; touch-action: none; }
-        #edit-preview { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
-        #edit-stamp { position: absolute; width: 110px; height: 110px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translate(-50%, -50%); touch-action: none; background: rgba(255,255,255,0.05); z-index: 500; font-weight: bold; pointer-events: auto; }
+        /* 編輯器 */
+        #edit-stage { flex: 1; position: relative; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #edit-preview { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #edit-stamp { position: absolute; width: 120px; height: 120px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translate(-50%, -50%); touch-action: none; background: rgba(255,255,255,0.05); z-index: 500; font-weight: bold; }
         .stamp-red { color: #ff3b30; border: 4px double #ff3b30; }
         .stamp-blue { color: #007aff; border: 4px double #007aff; }
 
+        /* 目錄 */
         #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; flex: 1; }
-        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; }
+        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; position: relative; }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        #gps-badge { position: absolute; top: 10px; left: 10px; z-index: 3000; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 15px; font-size: 10px; border: 1px solid #444; }
+        #gps-badge { position: absolute; top: 60px; left: 15px; z-index: 3000; background: rgba(0,0,0,0.7); padding: 5px 12px; border-radius: 20px; font-size: 11px; }
     </style>
 </head>
 <body>
 
-<div id="gps-badge">📍 <span id="location-text">等待定位...</span></div>
+<div id="gps-badge">📍 <span id="location-text">定位中...</span></div>
 
 <div class="nav-tabs">
-    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝</div>
-    <div class="tab" id="tab-gal" onclick="showPage('gallery')">📂 目錄 <span id="count">(0)</span></div>
+    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝視景</div>
+    <div class="tab" id="tab-gal" onclick="showPage('gallery')">📂 待辦目錄 <span id="count">(0)</span></div>
 </div>
 
 <div id="page-camera" class="page active">
@@ -71,19 +74,19 @@
     <div id="edit-stage">
         <img id="edit-preview">
         <div id="edit-stamp" class="stamp-red">
-            <div style="font-size:9px;">VERIFIED</div>
+            <div style="font-size:9px;">OFFICIAL FOOTPRINT</div>
             <div style="font-size:16px; font-weight:900;" id="stamp-city">TRAVELER</div>
             <div style="font-size:9px;" id="stamp-date">2025.12.31</div>
         </div>
     </div>
     <div class="ui-panel">
-        <div style="display:flex; justify-content: center; gap:20px; margin-bottom:12px;">
-            <div style="width:25px; height:25px; background:#ff3b30; border-radius:50%; border:2px solid #fff;" onclick="setStampStyle('red')"></div>
-            <div style="width:25px; height:25px; background:#007aff; border-radius:50%; border:2px solid #fff;" onclick="setStampStyle('blue')"></div>
+        <div style="display:flex; justify-content: center; gap:30px; margin-bottom:15px;">
+            <div style="width:30px; height:30px; background:#ff3b30; border-radius:50%; border:2px solid #fff;" onclick="setStampStyle('red')"></div>
+            <div style="width:30px; height:30px; background:#007aff; border-radius:50%; border:2px solid #fff;" onclick="setStampStyle('blue')"></div>
         </div>
         <div class="ui-content">
-            <button style="width:35%; padding:12px; background:#333; color:#fff; border:none; border-radius:8px;" onclick="showPage('gallery')">取消</button>
-            <button style="width:55%; padding:12px; background:var(--accent); color:#000; border:none; border-radius:8px; font-weight:bold;" onclick="alert('功能已修復：座標鎖定成功！')">確認並分享</button>
+            <button style="width:35%; padding:15px; background:#333; color:#fff; border:none; border-radius:12px;" onclick="showPage('gallery')">取消</button>
+            <button style="width:55%; padding:15px; background:var(--accent); color:#000; border:none; border-radius:12px; font-weight:bold;" onclick="processFinalExport()">確認分享/儲存</button>
         </div>
     </div>
 </div>
@@ -91,79 +94,86 @@
 <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFile(event)">
 
 <script>
-    let db, currentFacing = "environment", circlePos = { x: 0.5, y: 0.5 };
-    let globalLoc = "BEITOU"; // 預設值
+    let db, currentFacing = "environment", circleCoords = { x: 0.5, y: 0.5 };
+    let locationName = "BEITOU";
+    let activeStampColor = "#ff3b30";
     const video = document.getElementById('bg-video');
 
-    // 1. 強健的 GPS 邏輯：不讓它卡住主執行緒
-    function startGPS() {
-        if (!navigator.geolocation) {
-            updateLocDisplay("不支援定位");
-            return;
+    // 1. 定位與 DB
+    function initApp() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=18&addressdetails=1`);
+                    const data = await res.json();
+                    locationName = (data.address.suburb || data.address.district || data.address.town || data.address.city || "TAIPEI").toUpperCase();
+                    document.getElementById('location-text').innerText = "📍 " + locationName;
+                } catch (e) { document.getElementById('location-text').innerText = "📍 定位成功"; }
+            }, null, {timeout: 5000});
         }
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            updateLocDisplay("解析地名...");
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=18&addressdetails=1`);
-                const data = await res.json();
-                const a = data.address;
-                globalLoc = (a.suburb || a.district || a.town || a.city || "TAIPEI").toUpperCase().replace(" DISTRICT", "");
-                updateLocDisplay(globalLoc);
-            } catch (e) { updateLocDisplay("定位成功"); }
-        }, () => { updateLocDisplay("定位關閉"); }, { timeout: 5000 });
+        const req = indexedDB.open("StampFinalDB", 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore("archive", { autoIncrement: true });
+        req.onsuccess = e => { db = e.target.result; updateBadge(); };
     }
 
-    function updateLocDisplay(txt) {
-        document.getElementById('location-text').innerText = txt;
-    }
-
-    // 2. 初始化相機與資料庫
-    const req = indexedDB.open("StampFixV3", 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore("items", { autoIncrement: true });
-    req.onsuccess = e => { db = e.target.result; updateBadge(); };
-
-    async function startCam() {
+    // 2. 相機操作 (修正凍結問題)
+    async function startCamera() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: { ideal: 1280 } } });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: { ideal: 1920 } } });
             video.srcObject = stream;
-        } catch (e) { alert("請確保相機權限已開啟"); }
+            video.onloadedmetadata = () => video.play();
+        } catch (e) { alert("無法存取相機"); }
     }
 
-    // 3. 觸控與拍照
-    window.addEventListener('touchstart', e => {
-        if (!document.getElementById('page-camera').classList.contains('active')) return;
-        updateCirclePos(e.touches[0]);
-    });
+    function toggleCamera() {
+        currentFacing = currentFacing === "environment" ? "user" : "environment";
+        startCamera();
+    }
+
+    // 3. 圓框定位 (正確紀錄座標)
     window.addEventListener('touchmove', e => {
         if (!document.getElementById('page-camera').classList.contains('active')) return;
-        updateCirclePos(e.touches[0]);
-    });
+        const touch = e.touches[0];
+        const vRect = document.getElementById('viewport').getBoundingClientRect();
+        if (touch.clientY < vRect.top || touch.clientY > vRect.bottom) return;
 
-    function updateCirclePos(touch) {
-        const rect = document.getElementById('viewport').getBoundingClientRect();
-        if (touch.clientY < rect.top || touch.clientY > rect.bottom) return;
-        circlePos = { x: touch.clientX / window.innerWidth, y: (touch.clientY - rect.top) / rect.height };
+        // 計算相對視景的百分比座標
+        circleCoords.x = touch.clientX / window.innerWidth;
+        circleCoords.y = (touch.clientY - vRect.top) / vRect.height;
+        
         document.documentElement.style.setProperty('--cx', touch.clientX + 'px');
         document.documentElement.style.setProperty('--cy', touch.clientY + 'px');
-    }
+    }, { passive: false });
 
+    // 4. 拍照 (修正紀錄不全問題)
     function capturePhoto() {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
-        const data = { img: canvas.toDataURL('image/jpeg', 0.8), cx: circlePos.x, cy: circlePos.y, city: globalLoc, date: new Date().toLocaleDateString() };
-        db.transaction("items", "readwrite").objectStore("items").add(data).onsuccess = updateBadge;
-        alert("已存入目錄");
+        
+        const data = {
+            img: canvas.toDataURL('image/jpeg', 0.8),
+            cx: circleCoords.x,
+            cy: circleCoords.y,
+            city: locationName,
+            date: new Date().toLocaleDateString()
+        };
+        
+        db.transaction("archive", "readwrite").objectStore("archive").add(data).onsuccess = () => {
+            updateBadge();
+            alert("拍照成功！已存入待辦目錄。");
+            // 拍照後確保 video 繼續撥放，不卡住
+            video.play();
+        };
     }
 
-    // 4. 編輯器修復 (穩定座標)
+    // 5. 編輯器與合成匯出 (補完確認分享功能)
     const editStamp = document.getElementById('edit-stamp');
     editStamp.addEventListener('touchmove', e => {
-        e.preventDefault();
         const stage = document.getElementById('edit-stage').getBoundingClientRect();
         editStamp.style.left = (e.touches[0].clientX - stage.left) + 'px';
         editStamp.style.top = (e.touches[0].clientY - stage.top) + 'px';
-    }, { passive: false });
+    });
 
     function openEditor(data) {
         const img = document.getElementById('edit-preview');
@@ -172,25 +182,72 @@
         document.getElementById('stamp-date').innerText = data.date;
         img.onload = () => {
             const stage = document.getElementById('edit-stage').getBoundingClientRect();
-            // 使用拍照時紀錄的百分比座標，還原到當前螢幕像素位置
-            editStamp.style.left = (stage.width * (data.cx || 0.5)) + 'px';
-            editStamp.style.top = (stage.height * (data.cy || 0.5)) + 'px';
+            // 還原拍攝時的圓框座標
+            editStamp.style.left = (stage.width * data.cx) + 'px';
+            editStamp.style.top = (stage.height * data.cy) + 'px';
             showPage('editor');
         };
     }
 
-    // 5. 其他
+    async function processFinalExport() {
+        const previewImg = document.getElementById('edit-preview');
+        const canvas = document.createElement('canvas');
+        canvas.width = previewImg.naturalWidth;
+        canvas.height = previewImg.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(previewImg, 0, 0);
+
+        // 計算郵戳在實際相片比例下的位置
+        const stage = document.getElementById('edit-stage').getBoundingClientRect();
+        const stampX = (parseFloat(editStamp.style.left) / stage.width) * canvas.width;
+        const stampY = (parseFloat(editStamp.style.top) / stage.height) * canvas.height;
+        const stampSize = (120 / stage.width) * canvas.width;
+
+        // 繪製郵戳
+        ctx.save();
+        ctx.translate(stampX, stampY);
+        ctx.strokeStyle = activeStampColor;
+        ctx.fillStyle = activeStampColor;
+        ctx.lineWidth = stampSize * 0.04;
+        ctx.beginPath(); ctx.arc(0, 0, stampSize/2, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, stampSize/2 - stampSize*0.06, 0, Math.PI*2); ctx.stroke();
+        ctx.textAlign = "center";
+        ctx.font = `bold ${stampSize * 0.08}px Arial`;
+        ctx.fillText("OFFICIAL FOOTPRINT", 0, -stampSize * 0.2);
+        ctx.font = `bold ${stampSize * 0.16}px Arial`;
+        ctx.fillText(document.getElementById('stamp-city').innerText, 0, stampSize * 0.05);
+        ctx.font = `${stampSize * 0.08}px Arial`;
+        ctx.fillText(document.getElementById('stamp-date').innerText, 0, stampSize * 0.25);
+        ctx.restore();
+
+        const finalUrl = canvas.toDataURL('image/jpeg', 0.9);
+        
+        try {
+            const blob = await (await fetch(finalUrl)).blob();
+            const file = new File([blob], "stamp_photo.jpg", { type: "image/jpeg" });
+            if (navigator.share) {
+                await navigator.share({ files: [file], title: '我的足跡郵戳' });
+            } else {
+                const link = document.createElement('a');
+                link.download = 'stamp_photo.jpg';
+                link.href = finalUrl;
+                link.click();
+            }
+        } catch (e) { alert("儲存失敗，請嘗試截圖或更換瀏覽器。"); }
+    }
+
+    // UI 切換
     function showPage(p) {
         document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
         document.getElementById('page-' + p).classList.add('active');
-        if (p === 'camera') { document.getElementById('tab-cam').classList.add('active'); startCam(); }
+        if (p === 'camera') { document.getElementById('tab-cam').classList.add('active'); startCamera(); }
         if (p === 'gallery') { document.getElementById('tab-gal').classList.add('active'); renderGallery(); }
     }
 
     function renderGallery() {
         const grid = document.getElementById('gallery-grid'); grid.innerHTML = '';
-        db.transaction("items", "readonly").objectStore("items").openCursor().onsuccess = e => {
+        db.transaction("archive", "readonly").objectStore("archive").openCursor().onsuccess = e => {
             const cursor = e.target.result;
             if (cursor) {
                 const div = document.createElement('div'); div.className = 'gallery-item';
@@ -203,16 +260,24 @@
         };
     }
 
-    function toggleCamera() { currentFacing = currentFacing === "environment" ? "user" : "environment"; startCam(); }
-    function setStampStyle(c) { editStamp.className = 'stamp-' + c; }
-    function updateBadge() { db.transaction("items", "readonly").objectStore("items").count().onsuccess = e => { document.getElementById('count').innerText = `(${e.target.result})`; }; }
-    function handleFile(e) { 
-        const reader = new FileReader(); 
-        reader.onload = (ev) => openEditor({ img: ev.target.result, cx: 0.5, cy: 0.5, city: globalLoc, date: "FILE" });
+    function setStampStyle(c) {
+        activeStampColor = c === 'red' ? '#ff3b30' : '#007aff';
+        editStamp.className = 'stamp-' + c;
+    }
+
+    function updateBadge() {
+        db.transaction("archive", "readonly").objectStore("archive").count().onsuccess = e => {
+            document.getElementById('count').innerText = `(${e.target.result})`;
+        };
+    }
+
+    function handleFile(e) {
+        const reader = new FileReader();
+        reader.onload = (ev) => openEditor({ img: ev.target.result, cx: 0.5, cy: 0.5, city: locationName, date: "FILE" });
         reader.readAsDataURL(e.target.files[0]);
     }
 
-    window.onload = () => { startCam(); startGPS(); };
+    window.onload = () => { initApp(); startCamera(); };
 </script>
 </body>
 </html>
