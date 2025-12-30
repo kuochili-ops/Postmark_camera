@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Postmark CSS Mask Fix</title>
+    <style>
+        :root { --cx: 50%; --cy: 50%; --cr: 70px; }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; height: 100vh; }
+        
+        /* 最底層：相機畫面 */
+        #media-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; display: flex; align-items: center; justify-content: center; }
+        #bg-video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* 中間層：CSS 遮罩 (這層會挖洞) */
+        #mask-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.4); /* 背景暗化，突顯圓框 */
+            pointer-events: none;
+            /* 關鍵：利用 radial-gradient 挖出一個透明的圓 */
+            mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 100%, black 100%);
+            -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 100%, black 100%);
+        }
+
+        /* 圓框邊緣 (單獨一個元素跟隨座標) */
+        #guide-border {
+            position: absolute;
+            width: calc(var(--cr) * 2); height: calc(var(--cr) * 2);
+            border: 3px dashed #00ffff;
+            border-radius: 50%;
+            left: var(--cx); top: var(--cy);
+            transform: translate(-50%, -50%);
+            z-index: 60;
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        /* UI 層 */
+        #app-ui { position: absolute; bottom: 0; left: 0; width: 100%; z-index: 100; background: rgba(0,0,0,0.8); border-top: 1px solid #444; padding-bottom: env(safe-area-inset-bottom); }
+        .ui-content { padding: 20px; display: flex; justify-content: space-around; align-items: center; }
+        .shutter-btn { width: 65px; height: 65px; border: 4px solid #fff; background: #ff0000; border-radius: 50%; }
+        .mode-btn { background: #333; color: white; border: 1px solid #555; padding: 10px 15px; border-radius: 8px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div id="media-bg">
+    <video id="bg-video" autoplay playsinline muted></video>
+</div>
+
+<div id="mask-layer"></div>
+<div id="guide-border"></div>
+
+<div id="app-ui">
+    <div class="ui-content">
+        <button class="mode-btn" onclick="startCamera()">📷 重啟相機</button>
+        <div class="shutter-btn" onclick="takeSnapshot()"></div>
+        <div style="color: #00ffff; font-size: 11px;">單指拖動螢幕移動圓框</div>
+    </div>
+</div>
+
+<script>
+    let posX = window.innerWidth / 2;
+    let posY = window.innerHeight / 2;
+
+    // 更新 CSS 變數來移動圓框
+    function updateCirclePos(x, y) {
+        posX = x;
+        posY = y;
+        document.documentElement.style.setProperty('--cx', `${x}px`);
+        document.documentElement.style.setProperty('--cy', `${y}px`);
+    }
+
+    // 觸控互動
+    window.addEventListener('touchstart', e => updateCirclePos(e.touches[0].clientX, e.touches[0].clientY));
+    window.addEventListener('touchmove', e => {
+        e.preventDefault();
+        updateCirclePos(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+
+    async function startCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
+            });
+            document.getElementById('bg-video').srcObject = stream;
+        } catch (err) {
+            alert("相機開啟失敗，請檢查權限");
+        }
+    }
+
+    function takeSnapshot() {
+        const video = document.getElementById('bg-video');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        
+        // 儲存邏輯 (可擴充)
+        alert(`照片已截取！郵戳中心座標：${Math.round(posX)}, ${Math.round(posY)}`);
+    }
+
+    window.onload = startCamera;
+</script>
+</body>
+</html>
