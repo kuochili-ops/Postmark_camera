@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp AR Pro - Flip Fix</title>
+    <title>Stamp AR Pro - Editor Plus</title>
     <style>
         :root { --cx: 50%; --cy: 50%; --cr: 75px; --accent: #00ffff; }
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: -apple-system, sans-serif; height: 100vh; color: white; }
         
-        /* 核心取景器 */
-        #viewport { position: relative; width: 100vw; height: calc(100vh - 160px); overflow: hidden; background: #000; }
+        /* 取景器 */
+        #viewport { position: relative; width: 100vw; height: calc(100vh - 180px); overflow: hidden; background: #000; }
         #bg-video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* 2D 圓框定位層 - CSS Mask 技術確保不消失 */
+        /* 2D 圓框層 */
         #guide-overlay {
             position: absolute; inset: 0; z-index: 100; pointer-events: none;
             background: rgba(0, 0, 0, 0.3);
@@ -23,7 +23,6 @@
             position: absolute; width: calc(var(--cr) * 2); height: calc(var(--cr) * 2);
             left: var(--cx); top: var(--cy); transform: translate(-50%, -50%);
             border: 3px dashed var(--accent); border-radius: 50%; z-index: 101; pointer-events: none;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
         }
 
         /* 導覽列 */
@@ -31,32 +30,40 @@
         .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
 
-        /* 操作面板 */
+        /* UI 面板 */
         #app-ui { position: fixed; bottom: 0; width: 100%; background: #000; padding-bottom: env(safe-area-inset-bottom); }
         .ui-content { padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .circle-btn { width: 50px; height: 50px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #444; font-size: 20px; }
-        #shutter-btn { width: 70px; height: 70px; border: 5px solid #fff; background: #f00; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-        #shutter-btn:active { transform: scale(0.9); background: #b00; }
-
-        /* 閃光動畫 */
-        .flash { position: absolute; inset: 0; background: white; z-index: 1000; opacity: 0; pointer-events: none; }
-        @keyframes flash-anim { 0% { opacity: 1; } 100% { opacity: 0; } }
+        .circle-btn { width: 45px; height: 45px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #444; }
+        #shutter-btn { width: 65px; height: 65px; border: 5px solid #fff; background: #f00; border-radius: 50%; }
 
         /* 頁面切換 */
-        .page { display: none; height: 100%; width: 100%; }
+        .page { display: none; height: 100%; width: 100%; position: absolute; }
         .page.active { display: block; }
-        #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; overflow-y: auto; height: calc(100vh - 50px); }
-        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; }
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* 編輯畫面 */
-        #page-editor { background: #000; }
+        
+        /* 編輯器樣式 */
+        #edit-container { position: relative; width: 100%; height: calc(100vh - 220px); background: #111; overflow: hidden; }
+        #edit-preview { width: 100%; height: 100%; object-fit: contain; }
+        
+        /* 郵戳本體 (可移動) */
         #edit-stamp { 
-            position: absolute; width: 130px; height: 130px; border: 4px double #ff3b30; border-radius: 50%; 
+            position: absolute; width: 120px; height: 120px; border-radius: 50%; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #ff3b30; transform: translate(-50%, -50%); pointer-events: none;
-            background: rgba(255, 0, 0, 0.05); font-weight: bold;
+            transform: translate(-50%, -50%); pointer-events: auto; touch-action: none;
+            transition: color 0.3s, border-color 0.3s;
+            background: rgba(255, 255, 255, 0.02);
+            user-select: none;
         }
+        .stamp-red { color: #ff3b30; border: 4px double #ff3b30; }
+        .stamp-blue { color: #007aff; border: 4px double #007aff; }
+        .stamp-black { color: #333; border: 4px double #333; }
+        .stamp-gold { color: #ffcc00; border: 4px double #ffcc00; }
+
+        /* 風格選擇器 */
+        .style-bar { display: flex; gap: 15px; padding: 10px; background: #111; overflow-x: auto; border-top: 1px solid #333; }
+        .style-dot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid white; flex-shrink: 0; }
+
+        .flash { position: absolute; inset: 0; background: white; z-index: 1000; opacity: 0; pointer-events: none; }
+        @keyframes flash-anim { 0% { opacity: 1; } 100% { opacity: 0; } }
     </style>
 </head>
 <body>
@@ -85,21 +92,28 @@
     </div>
 
     <div id="page-gallery" class="page">
-        <div id="gallery-grid"></div>
+        <div id="gallery-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; padding:4px;"></div>
     </div>
 
     <div id="page-editor" class="page">
-        <div style="position:relative; width:100%; height:calc(100vh - 120px); overflow:hidden;">
-            <img id="edit-preview" style="width:100%; height:100%; object-fit:contain;">
-            <div id="edit-stamp">
-                <div style="font-size:10px;">PASSED</div>
-                <div style="font-size:18px;">TAIPEI</div>
+        <div id="edit-container">
+            <img id="edit-preview">
+            <div id="edit-stamp" class="stamp-red">
+                <div style="font-size:9px; letter-spacing: 1px;">VERIFIED</div>
+                <div style="font-size:18px; font-weight:900;" id="stamp-city">TAIPEI</div>
                 <div style="font-size:9px;" id="stamp-date">2025.12.31</div>
             </div>
         </div>
-        <div style="padding:20px; display:flex; gap:10px;">
-            <button style="flex:1; padding:15px; border-radius:10px; background:#333; color:white; border:none;" onclick="showPage('gallery')">返回</button>
-            <button style="flex:2; padding:15px; border-radius:10px; background:#00ffff; color:black; border:none; font-weight:bold;" onclick="alert('已儲存至相簿')">下載蓋章照片</button>
+        <div class="style-bar">
+            <div class="style-dot" style="background:#ff3b30;" onclick="setStampStyle('red')"></div>
+            <div class="style-dot" style="background:#007aff;" onclick="setStampStyle('blue')"></div>
+            <div class="style-dot" style="background:#333;" onclick="setStampStyle('black')"></div>
+            <div class="style-dot" style="background:#ffcc00;" onclick="setStampStyle('gold')"></div>
+            <span style="font-size:12px; margin-left:auto;">拖動郵戳調整位置</span>
+        </div>
+        <div style="padding:15px; display:flex; gap:10px; background:#000;">
+            <button style="flex:1; padding:12px; border-radius:8px; background:#333; color:white; border:none;" onclick="showPage('gallery')">取消</button>
+            <button style="flex:2; padding:12px; border-radius:8px; background:var(--accent); color:black; border:none; font-weight:bold;" onclick="alert('已儲存蓋章照片')">確認匯出</button>
         </div>
     </div>
 </div>
@@ -109,27 +123,24 @@
 <script>
     let db;
     let currentFacing = "environment";
-    let circlePos = { x: window.innerWidth / 2, y: (window.innerHeight - 160) / 2 };
+    let circlePos = { x: window.innerWidth / 2, y: (window.innerHeight - 180) / 2 };
     const video = document.getElementById('bg-video');
+    const editStamp = document.getElementById('edit-stamp');
 
     // 1. 初始化資料庫
-    const req = indexedDB.open("StampSystemDB", 1);
+    const req = indexedDB.open("StampPlusDB", 1);
     req.onupgradeneeded = e => e.target.result.createObjectStore("images", { autoIncrement: true });
     req.onsuccess = e => { db = e.target.result; updateBadge(); };
 
-    // 2. 鏡頭控制
+    // 2. 相機邏輯
     async function initCamera() {
-        if (video.srcObject) {
-            video.srcObject.getTracks().forEach(track => track.stop());
-        }
+        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } } 
+                video: { facingMode: currentFacing, width: { ideal: 1280 } } 
             });
             video.srcObject = stream;
-        } catch (err) {
-            alert("無法開啟相機: " + err);
-        }
+        } catch (err) { alert("相機開啟失敗"); }
     }
 
     function toggleCamera() {
@@ -137,56 +148,62 @@
         initCamera();
     }
 
-    // 3. 拖曳圓框
+    // 3. 通用拖曳邏輯 (相機定位 & 編輯定位)
     window.addEventListener('touchmove', e => {
+        const touch = e.touches[0];
         if (document.getElementById('page-camera').classList.contains('active')) {
-            circlePos.x = e.touches[0].clientX;
-            circlePos.y = e.touches[0].clientY;
+            circlePos.x = touch.clientX;
+            circlePos.y = touch.clientY;
             document.documentElement.style.setProperty('--cx', `${circlePos.x}px`);
             document.documentElement.style.setProperty('--cy', `${circlePos.y}px`);
         }
     }, { passive: false });
 
-    // 4. 拍照 (解決鎖死)
+    // 編輯器專用郵戳拖曳
+    editStamp.addEventListener('touchmove', e => {
+        const touch = e.touches[0];
+        const rect = document.getElementById('edit-container').getBoundingClientRect();
+        const x = ((touch.clientX - rect.left) / rect.width) * 100;
+        const y = ((touch.clientY - rect.top) / rect.height) * 100;
+        editStamp.style.left = `${x}%`;
+        editStamp.style.top = `${y}%`;
+    });
+
+    // 4. 拍照與風格
     function capturePhoto() {
-        // 閃光效果
         const flash = document.getElementById('flash-overlay');
-        flash.style.animation = 'none';
-        void flash.offsetWidth; 
         flash.style.animation = 'flash-anim 0.4s ease-out';
+        setTimeout(() => flash.style.animation = '', 400);
 
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
         
-        const imageData = {
+        const data = {
             img: canvas.toDataURL('image/jpeg', 0.8),
             cx: circlePos.x / window.innerWidth,
-            cy: circlePos.y / (window.innerHeight - 160),
+            cy: circlePos.y / (window.innerHeight - 180),
             date: new Date().toLocaleDateString()
         };
+        db.transaction("images", "readwrite").objectStore("images").add(data).onsuccess = updateBadge;
+    }
 
-        const tx = db.transaction("images", "readwrite");
-        tx.objectStore("images").add(imageData).onsuccess = () => {
-            updateBadge();
-            console.log("Saved");
-        };
+    function setStampStyle(color) {
+        editStamp.className = 'stamp-' + color;
     }
 
     function updateBadge() {
-        const tx = db.transaction("images", "readonly");
-        const countReq = tx.objectStore("images").count();
-        countReq.onsuccess = () => document.getElementById('count').innerText = `(${countReq.result})`;
+        db.transaction("images", "readonly").objectStore("images").count().onsuccess = e => {
+            document.getElementById('count').innerText = `(${e.target.result})`;
+        };
     }
 
-    // 5. 頁面與目錄
+    // 5. 頁面切換
     function showPage(p) {
         document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
         document.getElementById('page-' + p).classList.add('active');
-        document.getElementById('tab-' + (p === 'camera' ? 'cam' : 'gal')).classList.add('active');
+        if(p !== 'editor') document.getElementById('tab-' + (p==='camera'?'cam':'gal')).classList.add('active');
         if (p === 'gallery') renderGallery();
     }
 
@@ -196,12 +213,13 @@
         db.transaction("images", "readonly").objectStore("images").openCursor().onsuccess = e => {
             const cursor = e.target.result;
             if (cursor) {
-                const item = document.createElement('div');
-                item.className = 'gallery-item';
-                item.innerHTML = `<img src="${cursor.value.img}">`;
+                const div = document.createElement('div');
+                div.style.background = '#222';
+                div.style.aspectRatio = '1';
+                div.innerHTML = `<img src="${cursor.value.img}" style="width:100%; height:100%; object-fit:cover;">`;
                 const d = cursor.value;
-                item.onclick = () => openEditor(d);
-                grid.appendChild(item);
+                div.onclick = () => openEditor(d);
+                grid.appendChild(div);
                 cursor.continue();
             }
         };
@@ -210,9 +228,8 @@
     function openEditor(data) {
         document.getElementById('edit-preview').src = data.img;
         document.getElementById('stamp-date').innerText = data.date;
-        const stamp = document.getElementById('edit-stamp');
-        stamp.style.left = (data.cx * 100) + '%';
-        stamp.style.top = (data.cy * 100) + '%';
+        editStamp.style.left = (data.cx * 100) + '%';
+        editStamp.style.top = (data.cy * 100) + '%';
         showPage('editor');
     }
 
@@ -220,9 +237,7 @@
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (event) => {
-            openEditor({ img: event.target.result, cx: 0.5, cy: 0.5, date: "IMAGE" });
-        };
+        reader.onload = (ev) => openEditor({ img: ev.target.result, cx: 0.5, cy: 0.5, date: "IMAGE" });
         reader.readAsDataURL(file);
     }
 
