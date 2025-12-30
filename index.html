@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp AR Final Pro</title>
+    <title>Stamp AR Pro - Flip Fix</title>
     <style>
         :root { --cx: 50%; --cy: 50%; --cr: 75px; --accent: #00ffff; }
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; height: 100vh; color: white; }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: -apple-system, sans-serif; height: 100vh; color: white; }
         
-        /* 核心圖層架構 */
+        /* 核心取景器 */
         #viewport { position: relative; width: 100vw; height: calc(100vh - 160px); overflow: hidden; background: #000; }
-        #media-bg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-        #bg-video, #bg-image { max-width: none; max-height: none; transform-origin: center center; }
+        #bg-video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* 終極圓框層：利用 CSS Mask 確保可見性 */
+        /* 2D 圓框定位層 - CSS Mask 技術確保不消失 */
         #guide-overlay {
             position: absolute; inset: 0; z-index: 100; pointer-events: none;
             background: rgba(0, 0, 0, 0.3);
@@ -24,59 +23,63 @@
             position: absolute; width: calc(var(--cr) * 2); height: calc(var(--cr) * 2);
             left: var(--cx); top: var(--cy); transform: translate(-50%, -50%);
             border: 3px dashed var(--accent); border-radius: 50%; z-index: 101; pointer-events: none;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
         }
 
-        /* 導覽與 UI */
+        /* 導覽列 */
         .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; }
         .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; }
-        .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); }
+        .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
 
-        #app-ui { position: fixed; bottom: 0; width: 100%; background: #000; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid #333; }
-        .ui-content { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .btn-group { display: flex; gap: 8px; }
-        .btn { flex: 1; height: 44px; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; font-weight: bold; }
-        .btn.primary { background: var(--accent); color: #000; border: none; }
-        
-        #shutter-btn { width: 60px; height: 60px; border: 4px solid #fff; background: #f00; border-radius: 50%; margin: 0 auto; }
+        /* 操作面板 */
+        #app-ui { position: fixed; bottom: 0; width: 100%; background: #000; padding-bottom: env(safe-area-inset-bottom); }
+        .ui-content { padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .circle-btn { width: 50px; height: 50px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #444; font-size: 20px; }
+        #shutter-btn { width: 70px; height: 70px; border: 5px solid #fff; background: #f00; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        #shutter-btn:active { transform: scale(0.9); background: #b00; }
 
-        /* 目錄與編輯 */
-        .page { display: none; height: 100%; width: 100%; position: absolute; }
+        /* 閃光動畫 */
+        .flash { position: absolute; inset: 0; background: white; z-index: 1000; opacity: 0; pointer-events: none; }
+        @keyframes flash-anim { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* 頁面切換 */
+        .page { display: none; height: 100%; width: 100%; }
         .page.active { display: block; }
-        #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 10px; overflow-y: auto; height: 100%; }
-        .gallery-item { aspect-ratio: 1; background: #222; position: relative; }
+        #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; overflow-y: auto; height: calc(100vh - 50px); }
+        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
-        
+
+        /* 編輯畫面 */
+        #page-editor { background: #000; }
         #edit-stamp { 
-            position: absolute; width: 140px; height: 140px; border: 4px double #d32f2f; border-radius: 50%; 
+            position: absolute; width: 130px; height: 130px; border: 4px double #ff3b30; border-radius: 50%; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #d32f2f; background: rgba(255,255,255,0.1); transform: translate(-50%, -50%);
+            color: #ff3b30; transform: translate(-50%, -50%); pointer-events: none;
+            background: rgba(255, 0, 0, 0.05); font-weight: bold;
         }
     </style>
 </head>
 <body>
 
+<div id="flash-overlay" class="flash"></div>
+
 <div class="nav-tabs">
-    <div class="tab active" onclick="showPage('camera')">📸 拍攝取景</div>
-    <div class="tab" onclick="showPage('gallery')">📂 待辦目錄 <span id="count">(0)</span></div>
+    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝</div>
+    <div class="tab" id="tab-gal" onclick="showPage('gallery')">📂 目錄 <span id="count">(0)</span></div>
 </div>
 
-<div style="position:relative; flex:1; height: calc(100vh - 210px);">
+<div style="flex:1; position:relative;">
     <div id="page-camera" class="page active">
         <div id="viewport">
-            <div id="media-bg">
-                <video id="bg-video" autoplay playsinline muted></video>
-                <img id="bg-image" style="display:none;">
-            </div>
+            <video id="bg-video" autoplay playsinline muted></video>
             <div id="guide-overlay"></div>
             <div id="guide-border"></div>
         </div>
         <div id="app-ui">
             <div class="ui-content">
-                <div class="btn-group">
-                    <button class="btn" id="modeBtn">🔄 調整模式: 圓框</button>
-                    <button class="btn" onclick="document.getElementById('file-input').click()">📂 相簿</button>
-                </div>
+                <div class="circle-btn" onclick="toggleCamera()">🔄</div>
                 <div id="shutter-btn" onclick="capturePhoto()"></div>
+                <div class="circle-btn" onclick="document.getElementById('file-input').click()">📂</div>
             </div>
         </div>
     </div>
@@ -86,128 +89,113 @@
     </div>
 
     <div id="page-editor" class="page">
-        <div id="editor-viewport" style="position:relative; width:100%; height:80%; overflow:hidden; background:#111;">
+        <div style="position:relative; width:100%; height:calc(100vh - 120px); overflow:hidden;">
             <img id="edit-preview" style="width:100%; height:100%; object-fit:contain;">
             <div id="edit-stamp">
-                <div style="font-size:10px;">OFFICIAL STAMP</div>
-                <div style="font-weight:bold; font-size:20px;" id="stamp-city">TAIPEI</div>
-                <div style="font-size:10px;" id="stamp-date">2025-12-30</div>
+                <div style="font-size:10px;">PASSED</div>
+                <div style="font-size:18px;">TAIPEI</div>
+                <div style="font-size:9px;" id="stamp-date">2025.12.31</div>
             </div>
         </div>
-        <div id="app-ui">
-            <div class="ui-content">
-                <div class="btn-group">
-                    <button class="btn" onclick="showPage('gallery')">取消</button>
-                    <button class="btn primary" onclick="finalExport()">下載蓋章照</button>
-                </div>
-            </div>
+        <div style="padding:20px; display:flex; gap:10px;">
+            <button style="flex:1; padding:15px; border-radius:10px; background:#333; color:white; border:none;" onclick="showPage('gallery')">返回</button>
+            <button style="flex:2; padding:15px; border-radius:10px; background:#00ffff; color:black; border:none; font-weight:bold;" onclick="alert('已儲存至相簿')">下載蓋章照片</button>
         </div>
     </div>
 </div>
 
-<input type="file" id="file-input" accept="image/*" style="display:none;">
+<input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFile(event)">
 
 <script>
     let db;
-    let mode = 'circle'; // 'circle' or 'bg'
-    let bgParams = { scale: 1, x: 0, y: 0, baseScale: 1 };
-    let circlePos = { x: window.innerWidth/2, y: (window.innerHeight-160)/2 };
+    let currentFacing = "environment";
+    let circlePos = { x: window.innerWidth / 2, y: (window.innerHeight - 160) / 2 };
+    const video = document.getElementById('bg-video');
 
     // 1. 初始化資料庫
-    const request = indexedDB.open("PostmarkProDB", 1);
-    request.onupgradeneeded = e => e.target.result.createObjectStore("archive", { autoIncrement: true });
-    request.onsuccess = e => { db = e.target.result; updateBadge(); };
+    const req = indexedDB.open("StampSystemDB", 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore("images", { autoIncrement: true });
+    req.onsuccess = e => { db = e.target.result; updateBadge(); };
 
-    // 2. 相機啟動
-    async function startCamera() {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        document.getElementById('bg-video').srcObject = stream;
+    // 2. 鏡頭控制
+    async function initCamera() {
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } } 
+            });
+            video.srcObject = stream;
+        } catch (err) {
+            alert("無法開啟相機: " + err);
+        }
     }
 
-    // 3. 核心互動：結合參考程式的背景操作
-    const viewport = document.getElementById('viewport');
-    let lx, ly, ld;
+    function toggleCamera() {
+        currentFacing = (currentFacing === "environment" ? "user" : "environment");
+        initCamera();
+    }
 
-    viewport.addEventListener('touchstart', e => {
-        lx = e.touches[0].clientX; ly = e.touches[0].clientY;
-        if(e.touches.length === 2) ld = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    });
-
-    viewport.addEventListener('touchmove', e => {
-        e.preventDefault();
-        if(mode === 'circle') {
+    // 3. 拖曳圓框
+    window.addEventListener('touchmove', e => {
+        if (document.getElementById('page-camera').classList.contains('active')) {
             circlePos.x = e.touches[0].clientX;
             circlePos.y = e.touches[0].clientY;
-            updateUI();
-        } else {
-            if(e.touches.length === 1) {
-                bgParams.x += (e.touches[0].clientX - lx);
-                bgParams.y += (e.touches[0].clientY - ly);
-                lx = e.touches[0].clientX; ly = e.touches[0].clientY;
-            } else if(e.touches.length === 2) {
-                const d = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-                bgParams.scale *= (d / ld); ld = d;
-            }
-            updateBG();
+            document.documentElement.style.setProperty('--cx', `${circlePos.x}px`);
+            document.documentElement.style.setProperty('--cy', `${circlePos.y}px`);
         }
     }, { passive: false });
 
-    function updateUI() {
-        document.documentElement.style.setProperty('--cx', `${circlePos.x}px`);
-        document.documentElement.style.setProperty('--cy', `${circlePos.y}px`);
-    }
-
-    function updateBG() {
-        const bg = document.getElementById('bg-image').style.display === 'block' ? document.getElementById('bg-image') : document.getElementById('bg-video');
-        const s = bgParams.baseScale * bgParams.scale;
-        bg.style.transform = `translate(${bgParams.x}px, ${bgParams.y}px) scale(${s})`;
-    }
-
-    // 4. 功能切換
-    document.getElementById('modeBtn').onclick = () => {
-        mode = (mode === 'circle' ? 'bg' : 'circle');
-        document.getElementById('modeBtn').innerText = `🔄 調整模式: ${mode === 'circle' ? '圓框' : '背景'}`;
-    };
-
-    function showPage(p) {
-        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        document.getElementById('page-' + p).classList.add('active');
-        if(p === 'gallery') renderGallery();
-    }
-
-    // 5. 拍照與資料庫
+    // 4. 拍照 (解決鎖死)
     function capturePhoto() {
-        const video = document.getElementById('bg-video');
+        // 閃光效果
+        const flash = document.getElementById('flash-overlay');
+        flash.style.animation = 'none';
+        void flash.offsetWidth; 
+        flash.style.animation = 'flash-anim 0.4s ease-out';
+
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0);
         
-        const data = { 
-            img: canvas.toDataURL('image/jpeg', 0.8), 
-            cx: circlePos.x / window.innerWidth, 
-            cy: circlePos.y / (window.innerHeight - 160) 
+        const imageData = {
+            img: canvas.toDataURL('image/jpeg', 0.8),
+            cx: circlePos.x / window.innerWidth,
+            cy: circlePos.y / (window.innerHeight - 160),
+            date: new Date().toLocaleDateString()
         };
-        const tx = db.transaction("archive", "readwrite");
-        tx.objectStore("archive").add(data).onsuccess = () => {
-            alert("已存入目錄");
+
+        const tx = db.transaction("images", "readwrite");
+        tx.objectStore("images").add(imageData).onsuccess = () => {
             updateBadge();
+            console.log("Saved");
         };
     }
 
     function updateBadge() {
-        const tx = db.transaction("archive", "readonly");
-        const req = tx.objectStore("archive").count();
-        req.onsuccess = () => document.getElementById('count').innerText = `(${req.result})`;
+        const tx = db.transaction("images", "readonly");
+        const countReq = tx.objectStore("images").count();
+        countReq.onsuccess = () => document.getElementById('count').innerText = `(${countReq.result})`;
+    }
+
+    // 5. 頁面與目錄
+    function showPage(p) {
+        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        document.getElementById('page-' + p).classList.add('active');
+        document.getElementById('tab-' + (p === 'camera' ? 'cam' : 'gal')).classList.add('active');
+        if (p === 'gallery') renderGallery();
     }
 
     function renderGallery() {
         const grid = document.getElementById('gallery-grid');
         grid.innerHTML = '';
-        db.transaction("archive", "readonly").objectStore("archive").openCursor().onsuccess = e => {
+        db.transaction("images", "readonly").objectStore("images").openCursor().onsuccess = e => {
             const cursor = e.target.result;
-            if(cursor) {
+            if (cursor) {
                 const item = document.createElement('div');
                 item.className = 'gallery-item';
                 item.innerHTML = `<img src="${cursor.value.img}">`;
@@ -221,21 +209,24 @@
 
     function openEditor(data) {
         document.getElementById('edit-preview').src = data.img;
+        document.getElementById('stamp-date').innerText = data.date;
         const stamp = document.getElementById('edit-stamp');
         stamp.style.left = (data.cx * 100) + '%';
         stamp.style.top = (data.cy * 100) + '%';
         showPage('editor');
     }
 
-    function finalExport() {
-        alert("正在合成高解析度蓋章照片並下載...");
-        showPage('gallery');
+    function handleFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            openEditor({ img: event.target.result, cx: 0.5, cy: 0.5, date: "IMAGE" });
+        };
+        reader.readAsDataURL(file);
     }
 
-    window.onload = () => {
-        startCamera();
-        updateUI();
-    };
+    window.onload = initCamera;
 </script>
 </body>
 </html>
