@@ -3,119 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Ultra Stable</title>
+    <title>Stamp Pro - Final Fix</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; --cr: 80px; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #000; overflow: hidden; font-family: -apple-system, sans-serif; height: 100dvh; display: flex; flex-direction: column; color: white; }
         
-        .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 999; }
+        /* 頁籤導覽 */
+        .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 9999; }
         .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
 
         .page { display: none; flex: 1; position: relative; overflow: hidden; }
         .page.active { display: flex; flex-direction: column; }
 
-        /* 相機頁面 */
+        /* 拍照頁面 */
         #viewport { position: relative; flex: 1; background: #000; overflow: hidden; }
         #bg-video { width: 100%; height: 100%; object-fit: cover; }
         #guide-overlay { position: absolute; inset: 0; z-index: 10; pointer-events: none; background: rgba(0,0,0,0.5); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
         #guide-border { position: absolute; width: calc(var(--cr)*2); height: calc(var(--cr)*2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; z-index: 11; pointer-events: none; }
 
-        /* 編輯頁面 - 核心修正 */
-        #edit-container { position: relative; flex: 1; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #edit-photo { max-width: 100%; max-height: 100%; display: block; }
-        #stamp-layer { position: absolute; width: 150px; height: 150px; z-index: 100; touch-action: none; display: flex; flex-direction: column; align-items: center; }
+        /* 編輯器 - 解決點不到問題 */
+        #edit-stage { position: relative; flex: 1; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
+        #edit-photo { max-width: 100%; max-height: 100%; pointer-events: none; }
+        #stamp-wrapper { position: absolute; width: 140px; height: 140px; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         #stamp-img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; pointer-events: none; }
-        .stamp-tag { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 4px; margin-top: 5px; white-space: nowrap; pointer-events: none; }
+        .stamp-info { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; margin-top: 5px; pointer-events: none; white-space: nowrap; }
 
-        .ui-panel { background: #000; padding: 15px; border-top: 1px solid #333; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
-        .btn-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .btn { flex: 1; padding: 16px; border-radius: 12px; border: none; font-weight: bold; font-size: 15px; cursor: pointer; }
-        .btn-main { background: var(--accent); color: #000; }
-        .btn-sub { background: #333; color: #fff; }
-        
-        #shutter { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; margin: 0 auto; display: block; }
+        /* 控制面板 */
+        .ui-panel { background: #000; padding: 15px; border-top: 1px solid #333; padding-bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 1000; }
+        .shutter { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; margin: 0 auto; display: block; box-shadow: 0 0 15px rgba(255,59,48,0.5); }
+        .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .btn { flex: 1; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-go { background: #333; color: #fff; }
+        .btn-save { background: var(--accent); color: #000; }
 
+        /* 目錄 */
         #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; }
-        .gallery-item img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        .loader { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: none; align-items: center; justify-content: center; }
+        #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: none; align-items: center; justify-content: center; flex-direction: column; }
     </style>
 </head>
 <body>
 
-<div id="loading" class="loader">正在處理郵戳與去背...</div>
+<div id="loading"><div style="font-size: 18px;">處理中，請稍候...</div></div>
 
 <div class="nav-tabs">
-    <div class="tab active" id="t-cam" onclick="switchPage('camera')">📸 拍攝拍照</div>
-    <div class="tab" id="t-gal" onclick="switchPage('gallery')">📂 待辦目錄 <span id="count">(0)</span></div>
+    <div class="tab active" id="tab-c" onclick="goTo('camera')">📸 拍攝拍照</div>
+    <div class="tab" id="tab-g" onclick="goTo('gallery')">📂 待辦目錄 <span id="count">(0)</span></div>
 </div>
 
 <div id="page-camera" class="page active">
-    <div id="viewport" ontouchmove="moveGuide(event)">
+    <div id="viewport" ontouchmove="handleGuideMove(event)">
         <video id="bg-video" autoplay playsinline muted></video>
         <div id="guide-overlay"></div>
         <div id="guide-border"></div>
     </div>
     <div class="ui-panel">
-        <button id="shutter" onclick="takeSnapshot()"></button>
+        <button class="shutter" onclick="doCapture()"></button>
     </div>
 </div>
 
-<div id="page-gallery" class="page">
-    <div id="gallery-grid"></div>
-</div>
+<div id="page-gallery" class="page"><div id="gallery-grid"></div></div>
 
 <div id="page-editor" class="page">
-    <div id="edit-container" id="stage">
+    <div id="edit-stage" ontouchmove="handleStampMove(event)">
         <img id="edit-photo">
-        <div id="stamp-layer">
-            <img id="stamp-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
-            <div class="stamp-tag">北投區 2025.12.31</div>
+        <div id="stamp-wrapper">
+            <img id="stamp-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==">
+            <div class="stamp-info">北投區 2025.12.31</div>
         </div>
     </div>
     <div class="ui-panel">
         <div class="btn-row">
-            <button class="btn btn-sub" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508','_blank')">1. 打開官網選圖</button>
-            <button class="btn btn-sub" onclick="fetchStamp()">2. 選完回這點我</button>
+            <button class="btn btn-go" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508')">1. 官網拷貝位址</button>
+            <button class="btn btn-go" onclick="applyStamp()">2. 回這裡點我</button>
         </div>
-        <button class="btn btn-main" style="width:100%" onclick="finalExport()">組合完成儲存相簿</button>
+        <button class="btn btn-save" style="width:100%" onclick="doExport()">組合完成儲存相簿</button>
     </div>
 </div>
 
 <script>
-    let db, stream, circle = { x: 0.5, y: 0.5 };
+    let db, activeStream, pos = { x: 0.5, y: 0.5 };
     const video = document.getElementById('bg-video');
 
-    // 初始化資料庫
-    const req = indexedDB.open("StampSystem_V17", 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore("archive", { autoIncrement: true });
-    req.onsuccess = e => { db = e.target.result; updateBadge(); startCamera(); };
+    // 資料庫初始化
+    const dbOpen = indexedDB.open("StampStore_V20", 1);
+    dbOpen.onupgradeneeded = e => e.target.result.createObjectStore("photos", { autoIncrement: true });
+    dbOpen.onsuccess = e => { db = e.target.result; updateBadge(); startCamera(); };
 
     async function startCamera() {
-        if (stream) stream.getTracks().forEach(t => t.stop());
+        if (activeStream) return; // 避免重複啟動導致凍結
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } } });
-            video.srcObject = stream;
-        } catch (err) { alert("相機啟動失敗，請檢查權限"); }
+            activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } } });
+            video.srcObject = activeStream;
+        } catch (err) { console.error("鏡頭啟動失敗"); }
     }
 
-    function moveGuide(e) {
+    function handleGuideMove(e) {
         const rect = document.getElementById('viewport').getBoundingClientRect();
         const t = e.touches[0];
-        circle.x = (t.clientX - rect.left) / rect.width;
-        circle.y = (t.clientY - rect.top) / rect.height;
+        pos.x = (t.clientX - rect.left) / rect.width;
+        pos.y = (t.clientY - rect.top) / rect.height;
         document.documentElement.style.setProperty('--cx', t.clientX + 'px');
         document.documentElement.style.setProperty('--cy', t.clientY + 'px');
     }
 
-    function takeSnapshot() {
+    function doCapture() {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
-        const data = { img: canvas.toDataURL('image/jpeg', 0.8), cx: circle.x, cy: circle.y };
-        db.transaction("archive", "readwrite").objectStore("archive").add(data).onsuccess = () => {
+        const data = { img: canvas.toDataURL('image/jpeg', 0.8), cx: pos.x, cy: pos.y };
+        db.transaction("photos", "readwrite").objectStore("photos").add(data).onsuccess = () => {
             updateBadge();
             alert("拍照成功！請至目錄編輯");
         };
@@ -123,14 +124,14 @@
 
     function renderGallery() {
         const grid = document.getElementById('gallery-grid'); grid.innerHTML = '';
-        db.transaction("archive", "readonly").objectStore("archive").openCursor().onsuccess = e => {
+        db.transaction("photos", "readonly").objectStore("photos").openCursor().onsuccess = e => {
             const cursor = e.target.result;
             if (!cursor) return;
-            const item = document.createElement('div');
-            item.className = 'gallery-item';
-            item.innerHTML = `<img src="${cursor.value.img}">`;
-            item.onclick = () => loadEditor(cursor.value);
-            grid.appendChild(item);
+            const div = document.createElement('div');
+            div.className = 'gallery-item';
+            div.innerHTML = `<img src="${cursor.value.img}">`;
+            div.onclick = () => loadEditor(cursor.value);
+            grid.appendChild(div);
             cursor.continue();
         };
     }
@@ -138,21 +139,18 @@
     function loadEditor(data) {
         const photo = document.getElementById('edit-photo');
         photo.src = data.img;
-        switchPage('editor');
+        goTo('editor');
         
         photo.onload = () => {
-            const container = document.getElementById('edit-container').getBoundingClientRect();
-            const pw = photo.offsetWidth, ph = photo.offsetHeight;
-            const stamp = document.getElementById('stamp-layer');
-            // 計算照片相對於容器的偏移
-            const offsetX = (container.width - pw) / 2;
-            const offsetY = (container.height - ph) / 2;
-            stamp.style.left = (offsetX + pw * data.cx) + 'px';
-            stamp.style.top = (offsetY + ph * data.cy) + 'px';
+            const stage = document.getElementById('edit-stage').getBoundingClientRect();
+            const wrapper = document.getElementById('stamp-wrapper');
+            // 修正比例，確保郵戳出現在拍照時瞄準的位置
+            wrapper.style.left = (stage.width * data.cx) + 'px';
+            wrapper.style.top = (stage.height * data.cy) + 'px';
         };
     }
 
-    async function fetchStamp() {
+    async function applyStamp() {
         const url = await navigator.clipboard.readText().catch(() => prompt("請貼上圖片位址："));
         if (!url || !url.startsWith('http')) return;
 
@@ -166,9 +164,10 @@
             c.width = img.width; c.height = img.height;
             const ctx = c.getContext('2d');
             ctx.drawImage(img, 0, 0);
+            // 去白底演算法
             const idata = ctx.getImageData(0,0,c.width,c.height);
             for(let i=0; i<idata.data.length; i+=4) {
-                if(idata.data[i]>210 && idata.data[i+1]>210 && idata.data[i+2]>210) idata.data[i+3]=0;
+                if(idata.data[i]>215 && idata.data[i+1]>215 && idata.data[i+2]>215) idata.data[i+3]=0;
             }
             ctx.putImageData(idata,0,0);
             document.getElementById('stamp-img').src = c.toDataURL();
@@ -176,15 +175,14 @@
         };
     }
 
-    // 拖移郵戳
-    const stampLayer = document.getElementById('stamp-layer');
-    stampLayer.ontouchmove = e => {
-        const container = document.getElementById('edit-container').getBoundingClientRect();
-        stampLayer.style.left = (e.touches[0].clientX - container.left) + 'px';
-        stampLayer.style.top = (e.touches[0].clientY - container.top) + 'px';
-    };
+    function handleStampMove(e) {
+        const stage = document.getElementById('edit-stage').getBoundingClientRect();
+        const wrapper = document.getElementById('stamp-wrapper');
+        wrapper.style.left = (e.touches[0].clientX - stage.left) + 'px';
+        wrapper.style.top = (e.touches[0].clientY - stage.top) + 'px';
+    }
 
-    function finalExport() {
+    function doExport() {
         const photo = document.getElementById('edit-photo');
         const stamp = document.getElementById('stamp-img');
         const canvas = document.createElement('canvas');
@@ -192,12 +190,12 @@
         const ctx = canvas.getContext('2d');
         ctx.drawImage(photo, 0, 0);
 
-        const container = document.getElementById('edit-container').getBoundingClientRect();
-        const stampRect = stampLayer.getBoundingClientRect();
+        const stage = document.getElementById('edit-stage').getBoundingClientRect();
+        const stampRect = document.getElementById('stamp-wrapper').getBoundingClientRect();
         
-        // 換算比例
-        const rx = (stampRect.left - (container.left + (container.width - photo.offsetWidth)/2) + stampRect.width/2) / photo.offsetWidth;
-        const ry = (stampRect.top - (container.top + (container.height - photo.offsetHeight)/2) + stampRect.height/2) / photo.offsetHeight;
+        // 換算精確比例儲存
+        const rx = (stampRect.left - stage.left + stampRect.width/2) / stage.width;
+        const ry = (stampRect.top - stage.top + stampRect.height/2) / stage.height;
         
         const sz = canvas.width * 0.35;
         ctx.drawImage(stamp, canvas.width * rx - sz/2, canvas.height * ry - sz/2, sz, sz);
@@ -208,22 +206,27 @@
         ctx.fillText("北投區 2025.12.31", canvas.width * rx, canvas.height * ry + sz/2 + 40);
 
         const link = document.createElement('a');
-        link.download = `PostStamp_${Date.now()}.jpg`;
-        link.href = canvas.toDataURL('image/jpeg', 0.9);
+        link.download = `Stamp_${Date.now()}.jpg`;
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
         link.click();
-        alert("儲存成功！");
+        alert("儲存完成！");
     }
 
-    function switchPage(p) {
+    function goTo(p) {
         document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
         document.getElementById('page-' + p).classList.add('active');
-        if(p === 'camera') { document.getElementById('t-cam').classList.add('active'); startCamera(); }
-        if(p === 'gallery') { document.getElementById('t-gal').classList.add('active'); renderGallery(); }
+        if(p === 'camera') { 
+            document.getElementById('tab-c').classList.add('active');
+            startCamera(); 
+        } else if(p === 'gallery') {
+            document.getElementById('tab-g').classList.add('active');
+            renderGallery();
+        }
     }
 
     function updateBadge() {
-        db.transaction("archive", "readonly").objectStore("archive").count().onsuccess = e => {
+        db.transaction("photos", "readonly").objectStore("photos").count().onsuccess = e => {
             document.getElementById('count').innerText = `(${e.target.result})`;
         };
     }
