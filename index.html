@@ -3,66 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Streamlined</title>
+    <title>Stamp Pro - Camera Shield</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; --cr: 80px; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: #000; overflow: hidden; font-family: -apple-system, sans-serif; height: 100dvh; color: white; display: flex; flex-direction: column; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: -apple-system, sans-serif; height: 100dvh; display: flex; flex-direction: column; color: white; }
         
-        /* 頁面切換 */
-        .page { display: none; flex: 1; position: relative; overflow: hidden; flex-direction: column; }
-        .page.active { display: flex; }
+        /* 頁面管理 */
+        .page { display: none; flex: 1; position: relative; overflow: hidden; }
+        .page.active { display: flex; flex-direction: column; }
 
         /* 相機視窗 */
-        #viewport { position: relative; flex: 1; background: #000; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        #guide { position: absolute; inset: 0; pointer-events: none; z-index: 10; background: rgba(0,0,0,0.4); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
-        #ring { position: absolute; width: calc(var(--cr)*2); height: calc(var(--cr)*2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; z-index: 11; }
+        #viewport { position: relative; flex: 1; background: #000; overflow: hidden; }
+        #v { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        #guide { position: absolute; inset: 0; z-index: 5; pointer-events: none; background: rgba(0,0,0,0.5); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
+        #ring { position: absolute; width: calc(var(--cr)*2); height: calc(var(--cr)*2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; z-index: 6; pointer-events: none; }
 
         /* 編輯區域 */
-        #edit-zone { flex: 1; position: relative; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
-        #main-photo { max-width: 100%; max-height: 100%; }
-        #stamp-box { position: absolute; width: 150px; height: 150px; z-index: 100; transform: translate(-50%, -50%); cursor: move; display: flex; flex-direction: column; align-items: center; }
-        #stamp-img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
-        .stamp-txt { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; margin-top: 5px; white-space: nowrap; pointer-events: none; }
+        #edit-stage { position: relative; flex: 1; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
+        #photo-preview { max-width: 100%; max-height: 100%; }
+        #stamp-box { position: absolute; width: 150px; height: 150px; z-index: 100; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; }
+        #stamp-img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; pointer-events: none; }
+        .stamp-tag { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 4px; margin-top: 5px; white-space: nowrap; }
 
         /* 控制面板 */
-        .panel { background: #000; padding: 15px; border-top: 1px solid #333; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
-        .shutter-group { display: flex; justify-content: space-around; align-items: center; }
-        .shutter-btn { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
+        .panel { background: #000; padding: 15px; border-top: 1px solid #333; padding-bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 1000; }
+        .shutter-row { display: flex; justify-content: space-around; align-items: center; }
+        .shutter { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
+        .btn-icon { background: none; border: none; color: white; font-size: 30px; cursor: pointer; }
+
         .btn-row { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn { flex: 1; padding: 16px; border-radius: 12px; border: none; font-weight: bold; font-size: 15px; }
         .btn-dark { background: #333; color: #fff; }
         .btn-main { background: var(--accent); color: #000; }
 
-        .loading { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: none; align-items: center; justify-content: center; }
+        #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-<div id="loader" class="loading">正在處理去背中...</div>
+<div id="loading">載入中...</div>
 
-<div id="page-cam" class="page active">
-    <div id="viewport" ontouchmove="movePoint(event)">
+<div id="page-camera" class="page active">
+    <div id="viewport" ontouchmove="updateCircle(event)">
         <video id="v" autoplay playsinline muted></video>
         <div id="guide"></div>
         <div id="ring"></div>
     </div>
     <div class="panel">
-        <div class="shutter-group">
-            <button style="background:none; border:none; font-size:30px;" onclick="flip()">🔄</button>
-            <button class="shutter-btn" onclick="take()"></button>
-            <button style="background:none; border:none; font-size:30px;" onclick="showGallery()">📂</button>
+        <div class="shutter-row">
+            <button class="btn-icon" onclick="toggleFacing()">🔄</button>
+            <button class="shutter" id="shutter-btn" onclick="capture()"></button>
+            <div style="width:40px;"></div>
         </div>
     </div>
 </div>
 
-<div id="page-edit" class="page">
-    <div id="edit-zone" ontouchmove="moveStamp(event)">
-        <img id="main-photo">
+<div id="page-editor" class="page">
+    <div id="edit-stage" ontouchmove="dragStamp(event)">
+        <img id="photo-preview">
         <div id="stamp-box">
             <img id="stamp-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
-            <div class="stamp-txt">北投區 2025.12.31</div>
+            <div class="stamp-tag">北投區 2025.12.31</div>
         </div>
     </div>
     <div class="panel">
@@ -70,98 +72,126 @@
             <button class="btn btn-dark" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508')">1. 選郵戳</button>
             <button class="btn btn-dark" onclick="pasteStamp()">2. 點我貼上</button>
         </div>
-        <button class="btn btn-main" style="width:100%" onclick="save()">組合完成儲存相簿</button>
-        <button onclick="backToCam()" style="width:100%; background:none; border:none; color:#888; margin-top:15px;">放棄並重新拍攝</button>
+        <button class="btn btn-main" style="width:100%" onclick="exportImage()">組合完成儲存相簿</button>
+        <button onclick="abort()" style="width:100%; background:none; border:none; color:#888; margin-top:15px; font-size:14px;">← 放棄並返回相機</button>
     </div>
 </div>
 
 <script>
-    let stream, db, currentFacing = "environment", pt = { x: 0.5, y: 0.5 };
-    const v = document.getElementById('v');
+    let activeStream = null;
+    let facing = "environment";
+    let circlePos = { x: 0.5, y: 0.5 };
+    const video = document.getElementById('v');
 
-    // 初始化 DB
-    const req = indexedDB.open("StampEasyDB", 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore("archive", { autoIncrement: true });
-    req.onsuccess = e => { db = e.target.result; start(); };
-
-    async function start() {
-        if (stream) stream.getTracks().forEach(t => t.stop());
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: { ideal: 1920 } } });
-        v.srcObject = stream;
+    // 初始化與啟動相機
+    async function initCamera() {
+        if (activeStream) {
+            activeStream.getTracks().forEach(t => t.stop());
+            activeStream = null;
+        }
+        try {
+            const constraints = { 
+                video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                audio: false
+            };
+            activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = activeStream;
+            // 確保影片播放
+            await video.play();
+        } catch (e) {
+            console.error("Camera error:", e);
+            alert("相機啟動失敗，請確認是否允許權限並使用 HTTPS 連線。");
+        }
     }
 
-    function flip() { currentFacing = currentFacing === "environment" ? "user" : "environment"; start(); }
+    function toggleFacing() {
+        facing = (facing === "environment") ? "user" : "environment";
+        initCamera();
+    }
 
-    function movePoint(e) {
-        const r = document.getElementById('viewport').getBoundingClientRect();
+    function updateCircle(e) {
+        const rect = document.getElementById('viewport').getBoundingClientRect();
         const t = e.touches[0];
-        pt.x = (t.clientX - r.left) / r.width;
-        pt.y = (t.clientY - r.top) / r.height;
+        circlePos.x = (t.clientX - rect.left) / rect.width;
+        circlePos.y = (t.clientY - rect.top) / rect.height;
         document.documentElement.style.setProperty('--cx', t.clientX + 'px');
         document.documentElement.style.setProperty('--cy', t.clientY + 'px');
     }
 
-    function take() {
-        const c = document.createElement('canvas');
-        c.width = v.videoWidth; c.height = v.videoHeight;
-        c.getContext('2d').drawImage(v, 0, 0);
-        const dataUrl = c.toDataURL('image/jpeg', 0.8);
+    function capture() {
+        if (!video.videoWidth) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
         
-        // 拍照後直接進入編輯模式
-        const photo = document.getElementById('main-photo');
-        photo.src = dataUrl;
+        // 切換到編輯模式
+        const preview = document.getElementById('photo-preview');
+        preview.src = canvas.toDataURL('image/jpeg', 0.9);
         
-        document.getElementById('page-cam').classList.remove('active');
-        document.getElementById('page-edit').classList.add('active');
+        document.getElementById('page-camera').classList.remove('active');
+        document.getElementById('page-editor').classList.add('active');
         
-        photo.onload = () => {
-            const stage = document.getElementById('edit-zone').getBoundingClientRect();
+        preview.onload = () => {
+            const stage = document.getElementById('edit-stage').getBoundingClientRect();
             const box = document.getElementById('stamp-box');
-            box.style.left = (stage.width * pt.x) + 'px';
-            box.style.top = (stage.height * pt.y) + 'px';
+            box.style.left = (stage.width * circlePos.x) + 'px';
+            box.style.top = (stage.height * circlePos.y) + 'px';
         };
+        
+        // 暫停相機節省資源
+        if (activeStream) {
+            activeStream.getTracks().forEach(t => t.stop());
+            activeStream = null;
+        }
     }
 
     async function pasteStamp() {
-        const url = await navigator.clipboard.readText().catch(() => prompt("請貼上連結："));
-        if (!url || !url.startsWith('http')) return;
+        try {
+            const url = await navigator.clipboard.readText().catch(() => prompt("請貼上郵戳圖片網址："));
+            if (!url || !url.startsWith('http')) return;
 
-        document.getElementById('loader').style.display = 'flex';
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&output=png`;
-        
-        img.onload = () => {
-            const c = document.createElement('canvas');
-            c.width = img.width; c.height = img.height;
-            const ctx = c.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            const idata = ctx.getImageData(0,0,c.width,c.height);
-            for(let i=0; i<idata.data.length; i+=4) {
-                if(idata.data[i]>210 && idata.data[i+1]>210 && idata.data[i+2]>210) idata.data[i+3]=0;
-            }
-            ctx.putImageData(idata,0,0);
-            document.getElementById('stamp-img').src = c.toDataURL();
-            document.getElementById('loader').style.display = 'none';
-        };
+            document.getElementById('loading').style.display = 'flex';
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&output=png`;
+            
+            img.onload = () => {
+                const c = document.createElement('canvas');
+                c.width = img.width; c.height = img.height;
+                const ctx = c.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const idata = ctx.getImageData(0,0,c.width,c.height);
+                for(let i=0; i<idata.data.length; i+=4) {
+                    if(idata.data[i]>215 && idata.data[i+1]>215 && idata.data[i+2]>215) idata.data[i+3]=0;
+                }
+                ctx.putImageData(idata,0,0);
+                document.getElementById('stamp-img').src = c.toDataURL();
+                document.getElementById('loading').style.display = 'none';
+            };
+        } catch (e) {
+            alert("無法自動貼上，請手動輸入連結。");
+            document.getElementById('loading').style.display = 'none';
+        }
     }
 
-    function moveStamp(e) {
-        const stage = document.getElementById('edit-zone').getBoundingClientRect();
+    function dragStamp(e) {
+        const stage = document.getElementById('edit-stage').getBoundingClientRect();
         const box = document.getElementById('stamp-box');
         box.style.left = (e.touches[0].clientX - stage.left) + 'px';
         box.style.top = (e.touches[0].clientY - stage.top) + 'px';
     }
 
-    function save() {
-        const photo = document.getElementById('main-photo');
+    function exportImage() {
+        const photo = document.getElementById('photo-preview');
         const stamp = document.getElementById('stamp-img');
         const canvas = document.createElement('canvas');
-        canvas.width = photo.naturalWidth; canvas.height = photo.naturalHeight;
+        canvas.width = photo.naturalWidth;
+        canvas.height = photo.naturalHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(photo, 0, 0);
 
-        const stage = document.getElementById('edit-zone').getBoundingClientRect();
+        const stage = document.getElementById('edit-stage').getBoundingClientRect();
         const box = document.getElementById('stamp-box').getBoundingClientRect();
         
         const rx = (box.left - stage.left + box.width/2) / stage.width;
@@ -176,16 +206,19 @@
 
         const a = document.createElement('a');
         a.download = `Stamp_${Date.now()}.jpg`;
-        a.href = canvas.toDataURL('image/jpeg', 0.9);
+        a.href = canvas.toDataURL('image/jpeg', 0.95);
         a.click();
-        alert("儲存成功！");
+        alert("已嘗試儲存！若沒反應，請長按圖片手動儲存。");
     }
 
-    function backToCam() {
-        document.getElementById('page-edit').classList.remove('active');
-        document.getElementById('page-cam').classList.add('active');
-        start();
+    function abort() {
+        document.getElementById('page-editor').classList.remove('active');
+        document.getElementById('page-camera').classList.add('active');
+        initCamera();
     }
+
+    // 啟動
+    window.onload = initCamera;
 </script>
 </body>
 </html>
