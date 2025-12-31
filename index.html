@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Cross-Origin Fix</title>
+    <title>Stamp Pro - Ultra Fix</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; --cr: 80px; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #000; overflow: hidden; font-family: -apple-system, sans-serif; height: 100dvh; display: flex; flex-direction: column; color: white; }
         
-        /* 導覽與 UI */
+        /* 導覽列 */
         .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 9000; }
         .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
@@ -17,37 +17,38 @@
         .page { display: none; flex: 1; position: relative; overflow: hidden; flex-direction: column; }
         .page.active { display: flex; }
 
-        /* 相機 */
+        /* 相機視景 */
         #viewport { position: relative; flex: 1; background: #000; overflow: hidden; z-index: 100; }
         #bg-video { width: 100%; height: 100%; object-fit: cover; }
         #guide-overlay { position: absolute; inset: 0; z-index: 110; pointer-events: none; background: rgba(0,0,0,0.5); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
         #guide-border { position: absolute; width: calc(var(--cr)*2); height: calc(var(--cr)*2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; z-index: 111; pointer-events: none; }
 
+        /* 操作面板 */
         .ui-panel { background: #000; border-top: 1px solid #333; padding-bottom: env(safe-area-inset-bottom); z-index: 8000; }
         .ui-content { display: flex; justify-content: space-around; align-items: center; padding: 20px 0; }
         #shutter-btn { width: 75px; height: 75px; background: #ff3b30; border: 6px solid #fff; border-radius: 50%; }
 
-        /* 編輯器 */
-        #edit-stage { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        /* 編輯器核心 */
+        #edit-stage { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
         #edit-preview { max-width: 100%; max-height: 100%; object-fit: contain; z-index: 50; }
-        #edit-stamp { position: absolute; width: 150px; height: 150px; transform: translate(-50%, -50%); z-index: 500; touch-action: none; cursor: move; }
-        #current-stamp-img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; filter: contrast(1.1); }
-        .stamp-label { position: absolute; bottom: -35px; left: 50%; transform: translateX(-50%); color: #ff3b30; font-weight: 900; white-space: nowrap; font-size: 16px; background: rgba(0,0,0,0.8); padding: 2px 10px; border-radius: 4px; }
+        #edit-stamp { position: absolute; width: 160px; height: 160px; transform: translate(-50%, -50%); z-index: 500; display: flex; align-items: center; justify-content: center; }
+        #current-stamp-img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; filter: contrast(1.2); }
+        .stamp-label { position: absolute; bottom: -35px; left: 50%; transform: translateX(-50%); color: #ff3b30; font-weight: 900; white-space: nowrap; font-size: 16px; background: rgba(0,0,0,0.7); padding: 2px 10px; border-radius: 4px; pointer-events: none; }
 
         /* 目錄 */
         #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; }
         .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; border: 1px solid #111; }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        .loading-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
+        .loading-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
     </style>
 </head>
 <body>
 
-<div id="loader" class="loading-mask"><div style="font-size: 20px;">正在處理郵戳並組合照片...</div></div>
+<div id="loader" class="loading-mask"><div style="font-size: 20px;">正在處理郵戳與合成...</div></div>
 
 <div class="nav-tabs">
-    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝拍照</div>
+    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝視景</div>
     <div class="tab" id="tab-gal" onclick="showPage('gallery')">📂 待辦目錄 <span id="count">(0)</span></div>
 </div>
 
@@ -70,7 +71,7 @@
 
 <div id="page-editor" class="page">
     <div id="edit-stage">
-        <img id="edit-preview">
+        <img id="edit-preview" crossorigin="anonymous">
         <div id="edit-stamp">
             <img id="current-stamp-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==">
             <div class="stamp-label" id="stamp-text">北投區 2025.12.31</div>
@@ -78,8 +79,8 @@
     </div>
     <div class="ui-panel">
         <div class="ui-content" style="padding:15px 10px; gap:12px;">
-            <button onclick="pickStamp()" style="flex:1; padding:18px; background:#333; color:white; border:none; border-radius:12px; font-weight:bold;">選風景郵戳</button>
-            <button id="save-btn" onclick="saveFinal()" style="flex:1; padding:18px; background:var(--accent); color:black; border:none; border-radius:12px; font-weight:bold;">組合完成儲存</button>
+            <button onclick="pickOnlineStamp()" style="flex:1; padding:18px; background:#333; color:white; border:none; border-radius:12px; font-weight:bold;">選風景郵戳</button>
+            <button id="save-btn" onclick="saveFinalResult()" style="flex:1; padding:18px; background:var(--accent); color:black; border:none; border-radius:12px; font-weight:bold;">組合完成儲存</button>
         </div>
     </div>
 </div>
@@ -88,8 +89,7 @@
     let db, currentFacing = "environment", circlePos = { x: 0.5, y: 0.5 }, activeStream = null;
     const video = document.getElementById('bg-video');
 
-    // 初始化資料庫
-    const dbReq = indexedDB.open("StampFinalV12", 1);
+    const dbReq = indexedDB.open("StampUltraV13", 1);
     dbReq.onupgradeneeded = e => e.target.result.createObjectStore("archive", { autoIncrement: true });
     dbReq.onsuccess = e => { db = e.target.result; updateBadge(); startCam(); };
 
@@ -99,7 +99,7 @@
             activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: { ideal: 1920 } } });
             video.srcObject = activeStream;
             video.play();
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Camera error"); }
     }
 
     function moveCircle(e) {
@@ -116,7 +116,7 @@
         c.width = video.videoWidth; c.height = video.videoHeight;
         c.getContext('2d').drawImage(video, 0, 0);
         const data = { img: c.toDataURL('image/jpeg', 0.8), cx: circlePos.x, cy: circlePos.y, date: "2025.12.31", loc: "北投區" };
-        db.transaction("archive", "readwrite").objectStore("archive").add(data).onsuccess = () => { updateBadge(); startCam(); alert("捕捉成功！"); };
+        db.transaction("archive", "readwrite").objectStore("archive").add(data).onsuccess = () => { updateBadge(); startCam(); alert("已拍下照片！"); };
     }
 
     function renderGallery() {
@@ -152,36 +152,35 @@
         };
     }
 
-    // 修復：改用代理伺服器讀取郵戳，徹底去背
-    async function pickStamp() {
+    // 解決 CORS：使用 Weserv 代理並自動去背
+    async function pickOnlineStamp() {
         window.open("https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508", "_blank");
-        const url = prompt("請貼上郵戳連結：");
+        const url = prompt("請貼上在網頁中拷貝的郵戳連結：");
         if (!url || !url.startsWith('http')) return;
 
         document.getElementById('loader').style.display = 'flex';
-        try {
-            // 使用離屏畫布預先處理去背，解決 CORS
-            const tempImg = new Image();
-            tempImg.crossOrigin = "anonymous";
-            // 使用 Proxy 避開跨網域限制 (這裡使用常見的 cors-anywhere 或 Cloudflare Worker 代理)
-            tempImg.src = "https://images.weserv.nl/?url=" + encodeURIComponent(url.replace(/^https?:\/\//, ''));
+        const tempImg = new Image();
+        tempImg.crossOrigin = "anonymous";
+        // 關鍵：使用 Weserv 代理確保畫布不被污染
+        tempImg.src = "https://images.weserv.nl/?url=" + encodeURIComponent(url.replace(/^https?:\/\//, ''));
+        
+        tempImg.onload = () => {
+            const c = document.createElement('canvas');
+            c.width = tempImg.width; c.height = tempImg.height;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(tempImg, 0, 0);
             
-            tempImg.onload = () => {
-                const c = document.createElement('canvas');
-                c.width = tempImg.width; c.height = tempImg.height;
-                const ctx = c.getContext('2d');
-                ctx.drawImage(tempImg, 0, 0);
-                
-                // 去白底演算法
-                const idata = ctx.getImageData(0,0,c.width,c.height);
-                for(let i=0; i<idata.data.length; i+=4) {
-                    if(idata.data[i]>200 && idata.data[i+1]>200 && idata.data[i+2]>200) idata.data[i+3]=0;
-                }
-                ctx.putImageData(idata,0,0);
-                document.getElementById('current-stamp-img').src = c.toDataURL();
-                document.getElementById('loader').style.display = 'none';
-            };
-        } catch(e) { alert("讀取郵戳失敗，請換一張圖試試。"); document.getElementById('loader').style.display = 'none'; }
+            // 強力去白底演算法
+            const idata = ctx.getImageData(0,0,c.width,c.height);
+            for(let i=0; i<idata.data.length; i+=4) {
+                // 如果 RGB 皆大於 200 (偏白)，則設為全透明
+                if(idata.data[i]>200 && idata.data[i+1]>200 && idata.data[i+2]>200) idata.data[i+3]=0;
+            }
+            ctx.putImageData(idata,0,0);
+            document.getElementById('current-stamp-img').src = c.toDataURL();
+            document.getElementById('loader').style.display = 'none';
+        };
+        tempImg.onerror = () => { alert("無法載入此圖片，請嘗試另一張。"); document.getElementById('loader').style.display = 'none'; };
     }
 
     document.getElementById('edit-stamp').ontouchmove = e => {
@@ -190,9 +189,11 @@
         e.currentTarget.style.top = (e.touches[0].clientY - stage.top) + 'px';
     };
 
-    async function saveFinal() {
+    async function saveFinalResult() {
         const loader = document.getElementById('loader');
         loader.style.display = 'flex';
+        
+        // 延遲執行確保 UI 更新
         setTimeout(() => {
             try {
                 const pImg = document.getElementById('edit-preview');
@@ -200,28 +201,39 @@
                 const cvs = document.createElement('canvas');
                 cvs.width = pImg.naturalWidth; cvs.height = pImg.naturalHeight;
                 const ctx = cvs.getContext('2d');
+                
+                // 1. 畫主照片
                 ctx.drawImage(pImg, 0, 0);
 
+                // 2. 計算比例合成郵戳
                 const stage = document.getElementById('edit-stage').getBoundingClientRect();
                 const stampEl = document.getElementById('edit-stamp').getBoundingClientRect();
+                
+                // 換算精確座標
                 const rx = (stampEl.left - stage.left + stampEl.width/2) / stage.width;
                 const ry = (stampEl.top - stage.top + stampEl.height/2) / stage.height;
-                const sz = cvs.width * 0.35;
+                const sz = cvs.width * 0.35; // 郵戳尺寸固定比例
 
                 ctx.drawImage(sImg, cvs.width * rx - sz/2, cvs.height * ry - sz/2, sz, sz);
-                ctx.fillStyle = "#ff3b30";
-                ctx.font = `bold ${cvs.width * 0.035}px sans-serif`;
-                ctx.textAlign = "center";
-                ctx.fillText(document.getElementById('stamp-text').innerText, cvs.width * rx, cvs.height * ry + sz/2 + 30);
 
-                const a = document.createElement('a');
-                a.download = `StampPhoto_${Date.now()}.jpg`;
-                a.href = cvs.toDataURL('image/jpeg', 0.9);
-                a.click();
-                alert("儲存成功！");
-            } catch(e) { alert("儲存失敗，可能是郵戳圖源受限。"); }
+                // 3. 畫紅色標籤文字
+                ctx.fillStyle = "#ff3b30";
+                ctx.font = `bold ${cvs.width * 0.038}px sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText(document.getElementById('stamp-text').innerText, cvs.width * rx, cvs.height * ry + sz/2 + 35);
+
+                // 4. 下載
+                const link = document.createElement('a');
+                link.download = `Stamp_${Date.now()}.jpg`;
+                link.href = cvs.toDataURL('image/jpeg', 0.9);
+                link.click();
+                alert("組合儲存成功！");
+            } catch(e) {
+                alert("儲存失敗：畫布可能因安全政策受限。建議使用 Chrome 瀏覽器。");
+                console.error(e);
+            }
             loader.style.display = 'none';
-        }, 500);
+        }, 300);
     }
 
     function showPage(p) {
