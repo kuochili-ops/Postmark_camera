@@ -3,231 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Toggle Fix</title>
+    <title>Stamp Pro - UI Fix</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; --cr: 80px; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #000; overflow: hidden; font-family: -apple-system, sans-serif; height: 100dvh; display: flex; flex-direction: column; color: white; }
         
-        .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 9999; }
+        .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 9000; }
         .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
 
-        .page { display: none; flex: 1; position: relative; overflow: hidden; }
-        .page.active { display: flex; flex-direction: column; }
+        .page { display: none; flex: 1; position: relative; overflow: hidden; flex-direction: column; }
+        .page.active { display: flex; }
 
-        #viewport { position: relative; flex: 1; background: #000; overflow: hidden; }
+        #viewport { position: relative; flex: 1; background: #000; overflow: hidden; z-index: 100; }
         #bg-video { width: 100%; height: 100%; object-fit: cover; }
-        #guide-overlay { position: absolute; inset: 0; z-index: 10; pointer-events: none; background: rgba(0,0,0,0.5); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
-        #guide-border { position: absolute; width: calc(var(--cr)*2); height: calc(var(--cr)*2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; z-index: 11; pointer-events: none; }
+        #guide-overlay { position: absolute; inset: 0; z-index: 110; pointer-events: none; background: rgba(0,0,0,0.5); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
+        #guide-border { position: absolute; width: calc(var(--cr)*2); height: calc(var(--cr)*2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; z-index: 111; pointer-events: none; }
 
-        #edit-stage { position: relative; flex: 1; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
-        #edit-photo { max-width: 100%; max-height: 100%; pointer-events: none; }
-        #stamp-wrapper { position: absolute; width: 140px; height: 140px; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #stamp-img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; pointer-events: none; }
-        .stamp-info { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; margin-top: 5px; pointer-events: none; white-space: nowrap; }
+        .ui-panel { background: #000; border-top: 1px solid #333; padding-bottom: env(safe-area-inset-bottom); z-index: 8000; }
+        .ui-content { display: flex; justify-content: space-around; align-items: center; padding: 15px 0; }
+        #shutter-btn { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
 
-        .ui-panel { background: #000; padding: 15px; border-top: 1px solid #333; padding-bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 1000; }
-        .shutter-row { display: flex; align-items: center; justify-content: space-around; width: 100%; }
-        .shutter { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; box-shadow: 0 0 15px rgba(255,59,48,0.5); }
-        .btn-icon { font-size: 32px; background: none; border: none; color: white; padding: 10px; cursor: pointer; }
-
-        .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
-        .btn { flex: 1; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-go { background: #333; color: #fff; }
-        .btn-save { background: var(--accent); color: #000; }
+        #edit-stage { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
+        #edit-preview { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #edit-stamp { position: absolute; width: 160px; height: 160px; transform: translate(-50%, -50%); z-index: 500; display: flex; align-items: center; justify-content: center; }
+        #current-stamp-img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+        .stamp-label { position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); color: #ff3b30; font-weight: 900; white-space: nowrap; font-size: 15px; background: rgba(0,0,0,0.8); padding: 2px 10px; border-radius: 4px; pointer-events: none; }
 
         #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; }
-        .gallery-item img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; border: 1px solid #111; }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: none; align-items: center; justify-content: center; }
+        .loading-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
 
-<div id="loading">處理中...</div>
+<div id="loader" class="loading-mask"><div style="font-size: 18px;">正在從郵政官網擷取並去背...</div></div>
 
 <div class="nav-tabs">
-    <div class="tab active" id="tab-c" onclick="goTo('camera')">📸 拍攝拍照</div>
-    <div class="tab" id="tab-g" onclick="goTo('gallery')">📂 待辦目錄 <span id="count">(0)</span></div>
+    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝視景</div>
+    <div class="tab" id="tab-gal" onclick="showPage('gallery')">📂 待辦目錄 <span id="count">(0)</span></div>
 </div>
 
 <div id="page-camera" class="page active">
-    <div id="viewport" ontouchmove="handleGuideMove(event)">
+    <div id="viewport" ontouchmove="moveCircle(event)">
         <video id="bg-video" autoplay playsinline muted></video>
         <div id="guide-overlay"></div>
         <div id="guide-border"></div>
     </div>
     <div class="ui-panel">
-        <div class="shutter-row">
-            <button class="btn-icon" onclick="switchCamera()">🔄</button>
-            <button class="shutter" onclick="doCapture()"></button>
-            <div style="width:52px;"></div> </div>
+        <div class="ui-content">
+            <div onclick="toggleCamera()" style="font-size:28px;">🔄</div>
+            <div id="shutter-btn" onclick="capturePhoto()"></div>
+            <div style="width:28px;"></div>
+        </div>
     </div>
 </div>
 
 <div id="page-gallery" class="page"><div id="gallery-grid"></div></div>
 
 <div id="page-editor" class="page">
-    <div id="edit-stage" ontouchmove="handleStampMove(event)">
-        <img id="edit-photo">
-        <div id="stamp-wrapper">
-            <img id="stamp-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==">
-            <div class="stamp-info">北投區 2025.12.31</div>
+    <div id="edit-stage">
+        <img id="edit-preview" crossorigin="anonymous">
+        <div id="edit-stamp">
+            <img id="current-stamp-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==">
+            <div class="stamp-label" id="stamp-text">北投區 2025.12.31</div>
         </div>
     </div>
     <div class="ui-panel">
-        <div class="btn-row">
-            <button class="btn btn-go" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508')">1. 官網拷貝位址</button>
-            <button class="btn btn-go" onclick="applyStamp()">2. 回這裡點我</button>
+        <div style="display: flex; padding: 10px; gap: 8px;">
+            <button onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')" style="flex:1; padding:15px; background:#444; color:white; border:none; border-radius:10px; font-size:14px;">1. 開啟官網</button>
+            <button onclick="pasteStampLink()" style="flex:1; padding:15px; background:#444; color:white; border:none; border-radius:10px; font-size:14px;">2. 貼上連結</button>
         </div>
-        <button class="btn btn-save" style="width:100%" onclick="doExport()">組合完成儲存相簿</button>
+        <div style="padding: 0 10px 15px 10px;">
+            <button id="save-btn" onclick="saveFinalResult()" style="width:100%; padding:18px; background:var(--accent); color:black; border:none; border-radius:10px; font-weight:bold; font-size:16px;">組合完成儲存相簿</button>
+        </div>
     </div>
 </div>
 
 <script>
-    let db, activeStream, currentFacing = "environment", pos = { x: 0.5, y: 0.5 };
+    let db, currentFacing = "environment", circlePos = { x: 0.5, y: 0.5 }, activeStream = null;
     const video = document.getElementById('bg-video');
 
-    const dbOpen = indexedDB.open("StampStore_V22", 1);
-    dbOpen.onupgradeneeded = e => e.target.result.createObjectStore("photos", { autoIncrement: true });
-    dbOpen.onsuccess = e => { db = e.target.result; updateBadge(); startCamera(); };
+    const dbReq = indexedDB.open("StampSafeV14", 1);
+    dbReq.onupgradeneeded = e => e.target.result.createObjectStore("archive", { autoIncrement: true });
+    dbReq.onsuccess = e => { db = e.target.result; updateBadge(); startCam(); };
 
-    async function startCamera() {
-        if (activeStream) {
-            activeStream.getTracks().forEach(track => track.stop());
-        }
+    async function startCam() {
+        if (activeStream) activeStream.getTracks().forEach(t => t.stop());
         try {
-            activeStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: currentFacing, width: { ideal: 1920 }, height: { ideal: 1080 } } 
-            });
+            activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: { ideal: 1920 } } });
             video.srcObject = activeStream;
-            video.onloadedmetadata = () => video.play();
-        } catch (err) { alert("鏡頭開啟失敗：" + err.message); }
+            video.play();
+        } catch (e) { alert("請確保相機權限已開啟"); }
     }
 
-    function switchCamera() {
-        currentFacing = (currentFacing === "environment") ? "user" : "environment";
-        startCamera();
-    }
-
-    function handleGuideMove(e) {
+    function moveCircle(e) {
         const rect = document.getElementById('viewport').getBoundingClientRect();
         const t = e.touches[0];
-        pos.x = (t.clientX - rect.left) / rect.width;
-        pos.y = (t.clientY - rect.top) / rect.height;
+        circlePos.x = (t.clientX - rect.left) / rect.width;
+        circlePos.y = (t.clientY - rect.top) / rect.height;
         document.documentElement.style.setProperty('--cx', t.clientX + 'px');
         document.documentElement.style.setProperty('--cy', t.clientY + 'px');
     }
 
-    function doCapture() {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        const data = { img: canvas.toDataURL('image/jpeg', 0.8), cx: pos.x, cy: pos.y };
-        db.transaction("photos", "readwrite").objectStore("photos").add(data).onsuccess = () => {
-            updateBadge();
-            alert("拍照成功！請至目錄編輯");
-        };
+    async function capturePhoto() {
+        const c = document.createElement('canvas');
+        c.width = video.videoWidth; c.height = video.videoHeight;
+        c.getContext('2d').drawImage(video, 0, 0);
+        const data = { img: c.toDataURL('image/jpeg', 0.8), cx: circlePos.x, cy: circlePos.y, date: "2025.12.31", loc: "北投區" };
+        db.transaction("archive", "readwrite").objectStore("archive").add(data).onsuccess = () => { updateBadge(); startCam(); alert("拍照成功，請至待辦目錄編輯！"); };
     }
 
     function renderGallery() {
         const grid = document.getElementById('gallery-grid'); grid.innerHTML = '';
-        db.transaction("photos", "readonly").objectStore("photos").openCursor().onsuccess = e => {
+        db.transaction("archive", "readonly").objectStore("archive").openCursor().onsuccess = e => {
             const cursor = e.target.result;
-            if (!cursor) return;
-            const div = document.createElement('div');
-            div.className = 'gallery-item';
-            div.innerHTML = `<img src="${cursor.value.img}">`;
-            div.onclick = () => loadEditor(cursor.value);
-            grid.appendChild(div);
-            cursor.continue();
+            if (cursor) {
+                const id = cursor.key;
+                const div = document.createElement('div');
+                div.className = 'gallery-item';
+                div.innerHTML = `<img src="${cursor.value.img}" onclick="loadToEditor(${id})">`;
+                grid.appendChild(div);
+                cursor.continue();
+            }
         };
     }
 
-    function loadEditor(data) {
-        const photo = document.getElementById('edit-photo');
-        photo.src = data.img;
-        goTo('editor');
-        photo.onload = () => {
-            const stage = document.getElementById('edit-stage').getBoundingClientRect();
-            const wrapper = document.getElementById('stamp-wrapper');
-            wrapper.style.left = (stage.width * data.cx) + 'px';
-            wrapper.style.top = (stage.height * data.cy) + 'px';
-        };
+    function loadToEditor(id) {
+        db.transaction("archive", "readonly").objectStore("archive").get(id).onsuccess = e => openEditor(e.target.result);
     }
 
-    async function applyStamp() {
-        const url = await navigator.clipboard.readText().catch(() => prompt("請貼上圖片位址："));
-        if (!url || !url.startsWith('http')) return;
-        document.getElementById('loading').style.display = 'flex';
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&output=png`;
+    function openEditor(data) {
+        const img = document.getElementById('edit-preview'); img.src = data.img;
+        showPage('editor');
         img.onload = () => {
+            const stage = document.getElementById('edit-stage').getBoundingClientRect();
+            const rw = (img.naturalWidth/img.naturalHeight > stage.width/stage.height) ? stage.width : stage.height*(img.naturalWidth/img.naturalHeight);
+            const rh = rw / (img.naturalWidth/img.naturalHeight);
+            const s = document.getElementById('edit-stamp');
+            s.style.left = ((stage.width-rw)/2 + rw*data.cx) + 'px';
+            s.style.top = ((stage.height-rh)/2 + rh*data.cy) + 'px';
+        };
+    }
+
+    async function pasteStampLink() {
+        const url = prompt("請貼上在官網『長按圖片』後拷貝的連結：");
+        if (!url || !url.startsWith('http')) return;
+
+        document.getElementById('loader').style.display = 'flex';
+        const tempImg = new Image();
+        tempImg.crossOrigin = "anonymous";
+        // 使用代理避開跨域與儲存失敗問題
+        tempImg.src = "https://images.weserv.nl/?url=" + encodeURIComponent(url.replace(/^https?:\/\//, ''));
+        
+        tempImg.onload = () => {
             const c = document.createElement('canvas');
-            c.width = img.width; c.height = img.height;
+            c.width = tempImg.width; c.height = tempImg.height;
             const ctx = c.getContext('2d');
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(tempImg, 0, 0);
             const idata = ctx.getImageData(0,0,c.width,c.height);
             for(let i=0; i<idata.data.length; i+=4) {
-                if(idata.data[i]>215 && idata.data[i+1]>215 && idata.data[i+2]>215) idata.data[i+3]=0;
+                if(idata.data[i]>200 && idata.data[i+1]>200 && idata.data[i+2]>200) idata.data[i+3]=0;
             }
             ctx.putImageData(idata,0,0);
-            document.getElementById('stamp-img').src = c.toDataURL();
-            document.getElementById('loading').style.display = 'none';
+            document.getElementById('current-stamp-img').src = c.toDataURL();
+            document.getElementById('loader').style.display = 'none';
         };
     }
 
-    function handleStampMove(e) {
+    document.getElementById('edit-stamp').ontouchmove = e => {
         const stage = document.getElementById('edit-stage').getBoundingClientRect();
-        const wrapper = document.getElementById('stamp-wrapper');
-        wrapper.style.left = (e.touches[0].clientX - stage.left) + 'px';
-        wrapper.style.top = (e.touches[0].clientY - stage.top) + 'px';
+        e.currentTarget.style.left = (e.touches[0].clientX - stage.left) + 'px';
+        e.currentTarget.style.top = (e.touches[0].clientY - stage.top) + 'px';
+    };
+
+    async function saveFinalResult() {
+        document.getElementById('loader').style.display = 'flex';
+        setTimeout(() => {
+            try {
+                const pImg = document.getElementById('edit-preview');
+                const sImg = document.getElementById('current-stamp-img');
+                const cvs = document.createElement('canvas');
+                cvs.width = pImg.naturalWidth; cvs.height = pImg.naturalHeight;
+                const ctx = cvs.getContext('2d');
+                ctx.drawImage(pImg, 0, 0);
+
+                const stage = document.getElementById('edit-stage').getBoundingClientRect();
+                const stampEl = document.getElementById('edit-stamp').getBoundingClientRect();
+                const rx = (stampEl.left - stage.left + stampEl.width/2) / stage.width;
+                const ry = (stampEl.top - stage.top + stampEl.height/2) / stage.height;
+                const sz = cvs.width * 0.35;
+
+                ctx.drawImage(sImg, cvs.width * rx - sz/2, cvs.height * ry - sz/2, sz, sz);
+                ctx.fillStyle = "#ff3b30";
+                ctx.font = `bold ${cvs.width * 0.038}px sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText(document.getElementById('stamp-text').innerText, cvs.width * rx, cvs.height * ry + sz/2 + 35);
+
+                const a = document.createElement('a');
+                a.download = `Stamp_${Date.now()}.jpg`;
+                a.href = cvs.toDataURL('image/jpeg', 0.9);
+                a.click();
+                alert("儲存成功！請檢查相簿或下載資料夾。");
+            } catch(e) { alert("儲存失敗，請嘗試更換瀏覽器。"); }
+            document.getElementById('loader').style.display = 'none';
+        }, 300);
     }
 
-    function doExport() {
-        const photo = document.getElementById('edit-photo');
-        const stamp = document.getElementById('stamp-img');
-        const canvas = document.createElement('canvas');
-        canvas.width = photo.naturalWidth; canvas.height = photo.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(photo, 0, 0);
-        const stage = document.getElementById('edit-stage').getBoundingClientRect();
-        const wrapper = document.getElementById('stamp-wrapper').getBoundingClientRect();
-        const rx = (wrapper.left - stage.left + wrapper.width/2) / stage.width;
-        const ry = (wrapper.top - stage.top + wrapper.height/2) / stage.height;
-        const sz = canvas.width * 0.35;
-        ctx.drawImage(stamp, canvas.width * rx - sz/2, canvas.height * ry - sz/2, sz, sz);
-        ctx.fillStyle = "#ff3b30";
-        ctx.font = `bold ${canvas.width * 0.04}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.fillText("北投區 2025.12.31", canvas.width * rx, canvas.height * ry + sz/2 + 40);
-        const link = document.createElement('a');
-        link.download = `Stamp_${Date.now()}.jpg`;
-        link.href = canvas.toDataURL('image/jpeg', 0.9);
-        link.click();
-        alert("儲存完成！");
-    }
-
-    function goTo(p) {
+    function showPage(p) {
         document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
         document.getElementById('page-' + p).classList.add('active');
-        if(p === 'camera') {
-            document.getElementById('tab-c').classList.add('active');
-            startCamera();
-        } else if(p === 'gallery') {
-            document.getElementById('tab-g').classList.add('active');
-            renderGallery();
-        }
+        if (p === 'camera') { document.getElementById('tab-cam').classList.add('active'); startCam(); }
+        if (p === 'gallery') { document.getElementById('tab-gal').classList.add('active'); renderGallery(); }
     }
-
-    function updateBadge() {
-        db.transaction("photos", "readonly").objectStore("photos").count().onsuccess = e => {
-            document.getElementById('count').innerText = `(${e.target.result})`;
-        };
-    }
+    function toggleCamera() { currentFacing = currentFacing === "environment" ? "user" : "environment"; startCam(); }
+    function updateBadge() { db.transaction("archive", "readonly").objectStore("archive").count().onsuccess = e => { document.getElementById('count').innerText = `(${e.target.result})`; }; }
 </script>
 </body>
 </html>
