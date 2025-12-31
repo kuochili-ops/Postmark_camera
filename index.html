@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Gallery Fix</title>
+    <title>Stamp Pro - Clipboard Flow</title>
     <style>
-        :root { --accent: #00ffff; --cx: 50%; --cy: 50%; --cr: 80px; }
+        :root { --accent: #00ffff; --cx: 50%; --cy: 50%; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { margin: 0; padding: 0; height: 100dvh; overflow: hidden; background: #000; color: white; font-family: -apple-system, sans-serif; }
 
@@ -22,34 +22,33 @@
         video, #photo-preview { width: 100%; height: 100%; object-fit: cover; }
         #photo-preview { object-fit: contain; }
 
-        #stamp-box { position: absolute; width: 150px; height: 150px; transform: translate(-50%, -50%); z-index: 10; display: none; flex-direction: column; align-items: center; pointer-events: none; }
+        /* 郵戳 */
+        #stamp-box { position: absolute; width: 160px; height: 160px; transform: translate(-50%, -50%); z-index: 10; display: none; flex-direction: column; align-items: center; pointer-events: none; }
         #stamp-img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
-        .stamp-tag { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 4px; margin-top: 5px; }
+        .stamp-tag { color: #ff3b30; font-weight: 900; font-size: 15px; background: rgba(255,255,255,0.8); padding: 2px 10px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30; }
 
-        .bottom-panel { background: #000; border-top: 1px solid #333; padding: 15px 15px calc(15px + env(safe-area-inset-bottom)); min-height: 110px; display: flex; align-items: center; justify-content: center; }
-        .shutter { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
+        .bottom-panel { background: #000; border-top: 1px solid #333; padding: 15px 15px calc(15px + env(safe-area-inset-bottom)); min-height: 120px; display: flex; align-items: center; justify-content: center; }
+        .shutter { width: 75px; height: 75px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
         .btn-group { display: none; width: 100%; flex-direction: column; gap: 10px; }
-        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; }
+        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; }
 
-        /* 新的選圖彈出層 (替代白畫面網頁) */
-        #gallery-window { position: fixed; inset: 0; background: #1a1a1a; z-index: 9999; display: none; flex-direction: column; padding-top: env(safe-area-inset-top); }
-        .gallery-bar { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
-        #gallery-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 5px; }
-        .gallery-item { aspect-ratio: 1; background: #fff; border-radius: 4px; overflow: hidden; border: 2px solid transparent; }
-        .gallery-item img { width: 100%; height: 100%; object-fit: contain; }
-        .gallery-item.selected { border-color: var(--accent); }
-
+        /* 導引遮罩 */
+        #guide-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
+        
         #list-view { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; overflow-y: auto; }
-        .thumb { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; }
+        .thumb { background: #222; border-radius: 8px; overflow: hidden; }
         .thumb img { width: 100%; aspect-ratio: 3/4; object-fit: cover; }
+        #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: none; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
+<div id="loading">處理中...</div>
+
 <div class="app-container">
     <div class="top-nav">
-        <button class="nav-btn active" id="nav-cam" onclick="nav('camera')">📸 拍攝</button>
-        <button class="nav-btn" id="nav-list" onclick="nav('list')">📁 待辦 (<span id="count">0</span>)</button>
+        <button class="nav-btn active" id="nav-cam" onclick="nav('camera')">📸 拍攝拍照</button>
+        <button class="nav-btn" id="nav-list" onclick="nav('list')">📁 待處理 (<span id="count">0</span>)</button>
     </div>
 
     <div class="main-content">
@@ -74,36 +73,22 @@
     <div class="bottom-panel">
         <div id="ctrl-cam"><button class="shutter" onclick="snap()"></button></div>
         <div id="ctrl-edit" class="btn-group">
-            <button class="btn" style="background:var(--accent); color:#000;" onclick="openGallery()">選擇風景郵戳圖案</button>
-            <button class="btn" style="background:#333; color:white;" onclick="exportImg()">合併儲存</button>
-            <button class="btn" style="background:none; color:#888;" onclick="nav('list')">返回目錄</button>
+            <button class="btn" style="background:var(--accent); color:#000;" onclick="openWeb()">1. 前往官網複製郵戳</button>
+            <button class="btn" style="background:#333; color:white;" onclick="processClipboard()">2. 我已複製好，帶回郵戳</button>
+            <button class="btn" style="background:#ff3b30; color:white;" onclick="saveFinal()">3. 完成合併儲存</button>
         </div>
     </div>
 </div>
 
-<div id="gallery-window">
-    <div class="gallery-bar">
-        <button onclick="closeGallery()" style="background:none; border:none; color:white; font-size:16px;">✕ 關閉</button>
-        <b>點擊郵戳直接套用</b>
-        <div style="width:40px;"></div>
-    </div>
-    <div id="gallery-grid">
-        </div>
-    <div style="padding: 15px; background: #222; font-size: 13px; color: #aaa;">
-        提示：若需官網最新郵戳，請點 <a href="https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508" target="_blank" style="color:var(--accent)">這裡打開官網</a> 長按複製連結後回來。
-        <button class="btn" style="margin-top:10px; padding:8px; font-size:12px;" onclick="pasteFromClipboard()">貼上已複製的官網連結</button>
-    </div>
+<div id="guide-overlay">
+    <h3 style="color:var(--accent)">操作說明</h3>
+    <p>1. 在官網長按郵戳圖<br>2. 選擇<b>「複製圖片」</b>或<b>「複製連結」</b><br>3. 切換回此畫面點擊「帶回郵戳」</p>
+    <button class="btn" style="background:var(--accent); color:#000;" onclick="hideGuide()">知道了</button>
 </div>
 
 <script>
-    let stream, photos = [], activeIdx = -1, circle = { x: 0.5, y: 0.5 };
+    let stream, photos = [], activeIdx = -1;
     const video = document.getElementById('v');
-
-    // 預設一些北投或常用的郵戳連結 (範例，可替換為真實連結)
-    const presetStamps = [
-        "https://www.post.gov.tw/post/internet/Philately/images/st_beitou.png", 
-        "https://www.post.gov.tw/post/internet/Philately/images/st_yangmingshan.png"
-    ];
 
     async function init() {
         if (stream) stream.getTracks().forEach(t => t.stop());
@@ -119,82 +104,93 @@
         document.getElementById('ctrl-cam').style.display = (p==='camera') ? 'block' : 'none';
         document.getElementById('ctrl-edit').style.display = (p==='editor') ? 'flex' : 'none';
         if(p === 'camera') init();
+        if(p === 'list') renderList();
     }
 
     function snap() {
         const c = document.createElement('canvas');
         c.width = video.videoWidth; c.height = video.videoHeight;
         c.getContext('2d').drawImage(video, 0, 0);
-        photos.push({ src: c.toDataURL('image/jpeg', 0.9), x: circle.x, y: circle.y });
+        photos.push({ src: c.toDataURL('image/jpeg', 0.9), cx: '50%', cy: '50%' });
         document.getElementById('count').innerText = photos.length;
-        alert("已存入目錄");
+        alert("已存入待處理目錄");
     }
 
     function renderList() {
         const list = document.getElementById('list-view');
-        list.innerHTML = photos.map((p, i) => `<div class="thumb" onclick="edit(${i})"><img src="${p.src}"></div>`).join('');
+        list.innerHTML = photos.map((p, i) => `<div class="thumb" onclick="goEdit(${i})"><img src="${p.src}"></div>`).join('');
     }
 
-    function edit(i) {
+    function goEdit(i) {
         activeIdx = i;
         document.getElementById('photo-preview').src = photos[i].src;
         nav('editor');
-        const box = document.getElementById('stamp-box');
-        box.style.display = 'flex';
-        box.style.left = '50%'; box.style.top = '50%';
+        document.getElementById('stamp-box').style.display = 'flex';
+        document.getElementById('stamp-box').style.left = '50%';
+        document.getElementById('stamp-box').style.top = '50%';
     }
 
-    function openGallery() {
-        document.getElementById('gallery-window').style.display = 'flex';
-        const grid = document.getElementById('gallery-grid');
-        // 模擬一些郵政官網的郵戳圖 (這裡您可以填入您常用的郵戳網址)
-        grid.innerHTML = [1,2,3,4,5,6].map(n => `
-            <div class="gallery-item" onclick="selectStamp('https://www.post.gov.tw/post/internet/Philately/images/logo.png')">
-                <img src="https://www.post.gov.tw/post/internet/Philately/images/logo.png">
-            </div>
-        `).join('');
+    function openWeb() {
+        window.open("https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508", "_blank");
+        document.getElementById('guide-overlay').style.display = 'flex';
     }
 
-    function closeGallery() { document.getElementById('gallery-window').style.display = 'none'; }
+    function hideGuide() { document.getElementById('guide-overlay').style.display = 'none'; }
 
-    function selectStamp(url) {
-        loadStamp(url);
-        closeGallery();
-    }
-
-    async function pasteFromClipboard() {
-        const url = await navigator.clipboard.readText();
-        if(url.startsWith('http')) {
-            loadStamp(url);
-            closeGallery();
-        } else {
-            alert("請先長按官網圖片並選擇「複製圖片連結」");
+    async function processClipboard() {
+        document.getElementById('loading').style.display = 'flex';
+        try {
+            const items = await navigator.clipboard.read();
+            for (const item of items) {
+                // 優先處理直接複製的圖片
+                if (item.types.includes('image/png') || item.types.includes('image/jpeg')) {
+                    const blob = await item.getType(item.types.find(t => t.startsWith('image/')));
+                    renderStamp(URL.createObjectURL(blob));
+                    return;
+                }
+            }
+            // 若無圖片，則處理網址
+            const text = await navigator.clipboard.readText();
+            const urlMatch = text.match(/\bhttps?:\/\/\S+/gi);
+            if (urlMatch) {
+                const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(urlMatch[0].replace(/^https?:\/\//, ''))}&output=png`;
+                renderStamp(proxyUrl);
+            } else {
+                throw "No Content";
+            }
+        } catch (e) {
+            alert("請先長按圖片選擇「複製圖片」或「複製連結」");
+            document.getElementById('loading').style.display = 'none';
         }
     }
 
-    function loadStamp(url) {
+    function renderStamp(src) {
         const img = new Image();
         img.crossOrigin = "anonymous";
-        img.src = `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&output=png`;
+        img.src = src;
         img.onload = () => {
             const c = document.createElement('canvas');
             c.width = img.width; c.height = img.height;
             const ctx = c.getContext('2d');
             ctx.drawImage(img, 0, 0);
             const id = ctx.getImageData(0,0,c.width,c.height);
-            for(let i=0; i<id.data.length; i+=4) if(id.data[i]>215 && id.data[i+1]>215 && id.data[i+2]>215) id.data[i+3]=0;
+            // 去背邏輯
+            for(let i=0; i<id.data.length; i+=4) {
+                if(id.data[i]>220 && id.data[i+1]>220 && id.data[i+2]>220) id.data[i+3]=0;
+            }
             ctx.putImageData(id,0,0);
             document.getElementById('stamp-img').src = c.toDataURL();
+            document.getElementById('loading').style.display = 'none';
+            hideGuide();
         };
     }
 
-    // (其餘 moveCircle, moveStamp, exportImg 邏輯維持不變)
     function moveCircle(e) {
-        const r = e.currentTarget.getBoundingClientRect();
         const t = e.touches[0];
         document.documentElement.style.setProperty('--cx', t.clientX + 'px');
-        document.documentElement.style.setProperty('--cy', t.clientY + 'px');
+        document.documentElement.style.setProperty('--cy', (t.clientY - 40) + 'px');
     }
+
     function moveStamp(e) {
         const r = e.currentTarget.getBoundingClientRect();
         const t = e.touches[0];
@@ -202,11 +198,40 @@
         box.style.left = (t.clientX - r.left) + 'px';
         box.style.top = (t.clientY - r.top) + 'px';
     }
-    function exportImg() {
-        // ... (執行存檔邏輯)
-        alert("已儲存！");
+
+    function saveFinal() {
+        const photo = document.getElementById('photo-preview');
+        const stamp = document.getElementById('stamp-img');
+        if(!stamp.src) return alert("請先帶回郵戳");
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = photo.naturalWidth; canvas.height = photo.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(photo, 0, 0);
+        
+        const stg = document.querySelector('#page-editor #stage').getBoundingClientRect();
+        const box = document.getElementById('stamp-box').getBoundingClientRect();
+        const rx = (box.left - stg.left + box.width/2) / stg.width;
+        const ry = (box.top - stg.top + box.height/2) / stg.height;
+        const sz = canvas.width * 0.35;
+
+        ctx.drawImage(stamp, canvas.width * rx - sz/2, canvas.height * ry - sz/2, sz, sz);
+        ctx.fillStyle = "#ff3b30";
+        ctx.font = `bold ${canvas.width * 0.04}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText("北投區 2025.12.31", canvas.width * rx, canvas.height * ry + sz/2 + 40);
+
+        const a = document.createElement('a');
+        a.download = `StampPhoto_${Date.now()}.jpg`;
+        a.href = canvas.toDataURL('image/jpeg', 0.9);
+        a.click();
+        
+        photos.splice(activeIdx, 1);
+        document.getElementById('count').innerText = photos.length;
         nav('list');
     }
+
+    window.onload = init;
 </script>
 </body>
 </html>
