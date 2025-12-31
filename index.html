@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Direct Web Select</title>
+    <title>Stamp Pro - In-App Window</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; --cr: 80px; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { margin: 0; padding: 0; height: 100dvh; overflow: hidden; background: #000; color: white; font-family: -apple-system, sans-serif; }
 
+        /* 核心結構 */
         .app-container { display: flex; flex-direction: column; height: 100%; }
-        
-        /* 導覽 */
         .top-nav { display: flex; background: #1a1a1a; padding: 10px; gap: 10px; border-bottom: 1px solid #333; z-index: 100; }
         .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #333; color: #888; font-weight: bold; }
         .nav-btn.active { background: #444; color: var(--accent); }
@@ -20,62 +19,51 @@
         .page { display: none; width: 100%; height: 100%; flex-direction: column; }
         .page.active { display: flex; }
 
-        /* 相機與編輯器 */
-        #stage { position: relative; flex: 1; overflow: hidden; touch-action: none; background: #000; }
+        /* 顯示與編輯 */
+        #stage { position: relative; flex: 1; overflow: hidden; touch-action: none; background: #111; }
         video, #photo-preview { width: 100%; height: 100%; object-fit: cover; }
         #photo-preview { object-fit: contain; }
-
-        /* 輔助圈 */
-        #guide-overlay { position: absolute; inset: 0; pointer-events: none; }
-        #mask { position: absolute; inset: 0; background: rgba(0,0,0,0.5); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
-        #ring { position: absolute; width: calc(var(--cr)*2); height: calc(var(--cr)*2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; }
 
         /* 郵戳 */
         #stamp-box { position: absolute; width: 150px; height: 150px; transform: translate(-50%, -50%); z-index: 10; display: none; flex-direction: column; align-items: center; pointer-events: none; }
         #stamp-img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
         .stamp-tag { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 4px; margin-top: 5px; }
 
-        /* 底部固定面板 */
+        /* 固定面板 */
         .bottom-panel { background: #000; border-top: 1px solid #333; padding: 15px 15px calc(15px + env(safe-area-inset-bottom)); min-height: 110px; display: flex; align-items: center; justify-content: center; }
         .shutter { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
         .btn-group { display: none; width: 100%; flex-direction: column; gap: 10px; }
-        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .btn-main { background: var(--accent); color: #000; }
-        .btn-sub { background: #333; color: white; }
+        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; }
 
-        /* 待辦目錄 */
+        /* 內置小視窗 (關鍵) */
+        #web-window { position: fixed; top: 5%; left: 0; width: 100%; height: 95%; background: white; z-index: 9999; display: none; flex-direction: column; border-radius: 15px 15px 0 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); transform: translateY(100%); transition: transform 0.3s ease-out; }
+        #web-window.show { display: flex; transform: translateY(0); }
+        .window-bar { background: #222; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 15px 15px 0 0; }
+        iframe { flex: 1; border: none; width: 100%; }
+
         #list-view { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; overflow-y: auto; }
         .thumb { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; }
         .thumb img { width: 100%; aspect-ratio: 3/4; object-fit: cover; }
-
-        /* 選擇畫面遮罩 */
-        #pick-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        
-        #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: none; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-<div id="loading">正在擷取郵戳並去背...</div>
-
 <div class="app-container">
     <div class="top-nav">
-        <button class="nav-btn active" id="nav-cam" onclick="go('camera')">📸 拍攝拍照</button>
-        <button class="nav-btn" id="nav-list" onclick="go('list')">📁 待辦目錄 (<span id="count">0</span>)</button>
+        <button class="nav-btn active" id="nav-cam" onclick="nav('camera')">📸 拍攝</button>
+        <button class="nav-btn" id="nav-list" onclick="nav('list')">📁 待辦 (<span id="count">0</span>)</button>
     </div>
 
     <div class="main-content">
         <div id="page-camera" class="page active">
-            <div id="stage" ontouchmove="trackCircle(event)">
+            <div id="stage" ontouchmove="moveCircle(event)">
                 <video id="v" autoplay playsinline muted></video>
-                <div id="guide-overlay"><div id="mask"></div><div id="ring"></div></div>
+                <div id="ring" style="position:absolute; width:160px; height:160px; border:3px dashed var(--accent); border-radius:50%; left:var(--cx); top:var(--cy); transform:translate(-50%,-50%); pointer-events:none;"></div>
             </div>
         </div>
-        
         <div id="page-list" class="page"><div id="list-view"></div></div>
-        
         <div id="page-editor" class="page">
-            <div id="stage" ontouchmove="dragStamp(event)">
+            <div id="stage" ontouchmove="moveStamp(event)">
                 <img id="photo-preview">
                 <div id="stamp-box">
                     <img id="stamp-img">
@@ -86,28 +74,26 @@
     </div>
 
     <div class="bottom-panel">
-        <div id="ctrl-cam"><button class="shutter" onclick="captureBatch()"></button></div>
+        <div id="ctrl-cam"><button class="shutter" onclick="snap()"></button></div>
         <div id="ctrl-edit" class="btn-group">
-            <button class="btn btn-main" onclick="openPostWeb()">1. 前往網頁選郵戳</button>
-            <button class="btn btn-sub" onclick="combineAndSave()">2. 微調完成並合併儲存</button>
-            <button class="btn" style="background:none; color:#888;" onclick="go('list')">← 返回目錄</button>
+            <button class="btn" style="background:var(--accent); color:#000;" onclick="toggleWindow(true)">1. 在此打開網頁選圖</button>
+            <button class="btn" style="background:#333; color:white;" onclick="exportImg()">2. 合併儲存</button>
+            <button class="btn" style="background:none; color:#888;" onclick="nav('list')">回目錄</button>
         </div>
     </div>
 </div>
 
-<div id="pick-overlay">
-    <div style="font-size: 60px; margin-bottom: 20px;">🖼️</div>
-    <h3 style="color: var(--accent);">網頁選圖模式</h3>
-    <p style="color: #ccc; line-height: 1.6;">已為您開啟中華郵政網頁<br>找到喜歡的郵戳後：<br><b>長按圖片並選擇「複製圖片位址」</b></p>
-    <div style="width: 100%; margin: 20px 0; padding: 15px; background: #222; border-radius: 10px; font-size: 14px;">
-        複製好後，回到這裡點擊下方確認
+<div id="web-window">
+    <div class="window-bar">
+        <button onclick="toggleWindow(false)" style="background:none; border:none; color:white;">✕ 取消</button>
+        <span style="font-size:13px;">長按圖「複製連結」</span>
+        <button onclick="applySelection()" style="background:var(--accent); color:#000; border:none; padding:6px 15px; border-radius:6px; font-weight:bold;">完成帶回</button>
     </div>
-    <button class="btn btn-main" onclick="confirmSelection()">我已選好，帶回郵戳</button>
-    <button onclick="hideOverlay()" style="margin-top:20px; background:none; border:none; color:#888;">取消選取</button>
+    <iframe id="post-frame" src="https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508"></iframe>
 </div>
 
 <script>
-    let stream, photoStore = [], activeIdx = -1, circle = { x: 0.5, y: 0.5 };
+    let stream, photos = [], activeIdx = -1, circle = { x: 0.5, y: 0.5 };
     const video = document.getElementById('v');
 
     async function init() {
@@ -116,7 +102,7 @@
         video.srcObject = stream;
     }
 
-    function go(p) {
+    function nav(p) {
         document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
         document.getElementById('page-' + p).classList.add('active');
@@ -127,7 +113,7 @@
         if(p === 'list') renderList();
     }
 
-    function trackCircle(e) {
+    function moveCircle(e) {
         const r = e.currentTarget.getBoundingClientRect();
         const t = e.touches[0];
         circle = { x: (t.clientX - r.left) / r.width, y: (t.clientY - r.top) / r.height };
@@ -135,32 +121,32 @@
         document.documentElement.style.setProperty('--cy', t.clientY + 'px');
     }
 
-    function captureBatch() {
+    function snap() {
         const c = document.createElement('canvas');
         c.width = video.videoWidth; c.height = video.videoHeight;
         c.getContext('2d').drawImage(video, 0, 0);
-        photoStore.push({ src: c.toDataURL('image/jpeg', 0.9), x: circle.x, y: circle.y });
-        document.getElementById('count').innerText = photoStore.length;
-        alert("已存入待辦目錄");
+        photos.push({ src: c.toDataURL('image/jpeg', 0.9), x: circle.x, y: circle.y });
+        document.getElementById('count').innerText = photos.length;
+        alert("已拍好一張，存入待辦");
     }
 
     function renderList() {
         const list = document.getElementById('list-view');
-        list.innerHTML = photoStore.map((p, i) => `<div class="thumb" onclick="startEdit(${i})"><img src="${p.src}"><div style="padding:8px; text-align:center; font-size:12px;">照片 #${i+1}</div></div>`).join('');
+        list.innerHTML = photos.map((p, i) => `<div class="thumb" onclick="edit(${i})"><img src="${p.src}"><div style="padding:5px; text-align:center; font-size:12px;">照片 #${i+1}</div></div>`).join('');
     }
 
-    function startEdit(i) {
+    function edit(i) {
         activeIdx = i;
-        document.getElementById('photo-preview').src = photoStore[i].src;
-        go('editor');
+        document.getElementById('photo-preview').src = photos[i].src;
+        nav('editor');
         const box = document.getElementById('stamp-box');
         const stg = document.querySelector('#page-editor #stage').getBoundingClientRect();
         box.style.display = 'flex';
-        box.style.left = (stg.width * photoStore[i].x) + 'px';
-        box.style.top = (stg.height * photoStore[i].y) + 'px';
+        box.style.left = (stg.width * photos[i].x) + 'px';
+        box.style.top = (stg.height * photos[i].y) + 'px';
     }
 
-    function dragStamp(e) {
+    function moveStamp(e) {
         const r = e.currentTarget.getBoundingClientRect();
         const t = e.touches[0];
         const box = document.getElementById('stamp-box');
@@ -168,75 +154,60 @@
         box.style.top = (t.clientY - r.top) + 'px';
     }
 
-    // 關鍵流程：網頁選圖
-    function openPostWeb() {
-        window.open("https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508", "_blank");
-        document.getElementById('pick-overlay').style.display = 'flex';
+    // 小視窗切換
+    function toggleWindow(show) {
+        const win = document.getElementById('web-window');
+        if(show) win.classList.add('show');
+        else win.classList.remove('show');
     }
 
-    function hideOverlay() { document.getElementById('pick-overlay').style.display = 'none'; }
-
-    async function confirmSelection() {
+    async function applySelection() {
         try {
-            const url = await navigator.clipboard.readText();
-            if(!url.startsWith('http')) throw "URL Error";
+            const text = await navigator.clipboard.readText();
+            const url = text.match(/\bhttps?:\/\/\S+/gi)[0];
+            toggleWindow(false);
             
-            document.getElementById('loading').style.display = 'flex';
-            hideOverlay();
-
             const img = new Image();
             img.crossOrigin = "anonymous";
-            // 透過代理服務解決跨域與去背
+            // 透過第三方代理去背
             img.src = `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&output=png`;
-            
             img.onload = () => {
                 const c = document.createElement('canvas');
                 c.width = img.width; c.height = img.height;
                 const ctx = c.getContext('2d');
                 ctx.drawImage(img, 0, 0);
-                const idata = ctx.getImageData(0,0,c.width,c.height);
-                for(let i=0; i<idata.data.length; i+=4) {
-                    if(idata.data[i]>215 && idata.data[i+1]>215 && idata.data[i+2]>215) idata.data[i+3]=0;
-                }
-                ctx.putImageData(idata,0,0);
+                const id = ctx.getImageData(0,0,c.width,c.height);
+                for(let i=0; i<id.data.length; i+=4) if(id.data[i]>215 && id.data[i+1]>215 && id.data[i+2]>215) id.data[i+3]=0;
+                ctx.putImageData(id,0,0);
                 document.getElementById('stamp-img').src = c.toDataURL();
-                document.getElementById('loading').style.display = 'none';
             };
-        } catch(e) {
-            alert("請先在郵政官網長按圖片並選擇「複製圖片位址」，然後再按確認。");
-        }
+        } catch(e) { alert("請先長按郵戳圖選擇『複製圖片連結』"); }
     }
 
-    function combineAndSave() {
+    function exportImg() {
         const photo = document.getElementById('photo-preview');
         const stamp = document.getElementById('stamp-img');
-        if(!stamp.src) return alert("尚未選取郵戳圖案");
-
         const canvas = document.createElement('canvas');
         canvas.width = photo.naturalWidth; canvas.height = photo.naturalHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(photo, 0, 0);
-        
         const stg = document.querySelector('#page-editor #stage').getBoundingClientRect();
         const box = document.getElementById('stamp-box').getBoundingClientRect();
         const rx = (box.left - stg.left + box.width/2) / stg.width;
         const ry = (box.top - stg.top + box.height/2) / stg.height;
         const sz = canvas.width * 0.35;
-
         ctx.drawImage(stamp, canvas.width * rx - sz/2, canvas.height * ry - sz/2, sz, sz);
         ctx.fillStyle = "#ff3b30";
-        ctx.font = `bold ${canvas.width * 0.04}px sans-serif`;
+        ctx.font = `bold ${canvas.width * 0.045}px sans-serif`;
         ctx.textAlign = "center";
-        ctx.fillText("北投區 2025.12.31", canvas.width * rx, canvas.height * ry + sz/2 + 40);
-
+        ctx.fillText("北投區 2025.12.31", canvas.width * rx, canvas.height * ry + sz/2 + 50);
         const a = document.createElement('a');
-        a.download = `PostStamp_${Date.now()}.jpg`;
+        a.download = `Stamp_${Date.now()}.jpg`;
         a.href = canvas.toDataURL('image/jpeg', 0.95);
         a.click();
-        
-        photoStore.splice(activeIdx, 1);
-        document.getElementById('count').innerText = photoStore.length;
-        go('list');
+        photos.splice(activeIdx, 1);
+        document.getElementById('count').innerText = photos.length;
+        nav('list');
     }
 
     window.onload = init;
