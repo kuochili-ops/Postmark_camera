@@ -3,34 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - iOS Fix</title>
+    <title>Stamp Pro - Camera Fix</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
         html, body { margin: 0; padding: 0; height: 100dvh; overflow: hidden; background: #000; color: white; font-family: -apple-system, sans-serif; }
 
         .app-container { display: flex; flex-direction: column; height: 100%; }
+        
+        /* 頂部導航 */
         .top-nav { display: flex; background: #1a1a1a; padding: 10px; gap: 10px; border-bottom: 1px solid #333; z-index: 1000; touch-action: auto; }
-        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #333; color: #888; font-weight: bold; }
+        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #333; color: #888; font-weight: bold; font-size: 14px; }
         .nav-btn.active { background: #444; color: var(--accent); }
 
-        .main-content { flex: 1; position: relative; overflow: hidden; }
+        .main-content { flex: 1; position: relative; overflow: hidden; background: #000; }
         .page { display: none; width: 100%; height: 100%; position: relative; }
         .page.active { display: flex; flex-direction: column; }
 
-        #cam-stage { position: relative; flex: 1; overflow: hidden; background: #000; transition: opacity 0.1s; }
-        video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        /* 拍照區域：修正畫面不完整 */
+        #cam-stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #000; }
+        video { width: 100%; height: 100%; object-fit: contain; } /* 改為 contain 確保畫面全顯示 */
         
         #guide-ring { 
             position: absolute; width: 150px; height: 150px; border: 3px dashed var(--accent); border-radius: 50%; 
             left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); pointer-events: none; z-index: 500; 
         }
 
-        #edit-stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; background: #111; }
-        #photo-preview { width: 100%; height: 100%; object-fit: contain; z-index: 10; pointer-events: none; }
+        /* 編輯區域 */
+        #edit-stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; background: #111; overflow: hidden; }
+        #photo-preview { max-width: 100%; max-height: 100%; object-fit: contain; z-index: 10; pointer-events: none; }
 
         #stamp-wrapper { 
-            position: absolute; width: 150px; display: none; flex-direction: column; align-items: center; 
+            position: absolute; width: 140px; display: none; flex-direction: column; align-items: center; 
             z-index: 100; will-change: transform;
         }
         #stamp-img { width: 100%; height: auto; mix-blend-mode: multiply; pointer-events: none; }
@@ -41,19 +45,21 @@
 
         .gps-info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--accent); z-index: 600; }
 
-        .bottom-panel { background: #000; border-top: 1px solid #333; padding: 15px; min-height: 120px; display: flex; align-items: center; justify-content: center; touch-action: auto; }
-        .shutter-box { display: flex; align-items: center; gap: 40px; }
-        .shutter { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
-        .album-btn { width: 45px; height: 45px; background: #222; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #444; }
+        /* 底部控制面板 */
+        .bottom-panel { background: #000; border-top: 1px solid #333; padding: 15px; min-height: 130px; display: flex; align-items: center; justify-content: center; touch-action: auto; }
+        .shutter-box { display: flex; align-items: center; justify-content: space-around; width: 100%; max-width: 400px; }
+        .shutter { width: 75px; height: 75px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
+        .side-btn { width: 50px; height: 50px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; border: 1px solid #444; }
         
         .btn-group { display: none; width: 100%; flex-direction: column; gap: 8px; }
         .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; color: white; }
 
+        /* 結果預覽層 */
         #result-overlay { 
             position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; 
             display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; touch-action: auto;
         }
-        #result-img { max-width: 100%; max-height: 65%; border: 1px solid #555; margin-bottom: 20px; }
+        #result-img { max-width: 100%; max-height: 70%; border: 1px solid #555; margin-bottom: 20px; }
 
         #list-view { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; overflow-y: auto; touch-action: pan-y; }
         .thumb { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; }
@@ -90,15 +96,15 @@
 
     <div class="bottom-panel">
         <div id="ctrl-cam" class="shutter-box">
-            <div class="album-btn" onclick="document.getElementById('album-input').click()">🖼️</div>
+            <div class="side-btn" onclick="flipCam()">🔄</div>
             <button class="shutter" onclick="snap()"></button>
-            <div style="width:45px"></div>
+            <div class="side-btn" onclick="document.getElementById('album-input').click()">🖼️</div>
             <input type="file" id="album-input" hidden accept="image/*" onchange="importPhoto(event)">
         </div>
         <div id="ctrl-edit" class="btn-group">
-            <button class="btn" style="background:#007bff;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">1. 選取郵戳</button>
+            <button class="btn" style="background:#007bff;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">1. 複製郵戳圖</button>
             <button class="btn" style="background:#333;" onclick="processClipboard()">2. 帶回郵戳</button>
-            <button class="btn" style="background:#ff3b30;" onclick="saveFinal()">3. 完成存檔</button>
+            <button class="btn" style="background:#ff3b30;" onclick="saveFinal()">3. 生成照片</button>
         </div>
     </div>
 </div>
@@ -106,31 +112,33 @@
 <div id="result-overlay">
     <h3 style="color:var(--accent)">合成完成</h3>
     <img id="result-img">
-    <div style="display:flex; gap:10px; width:100%;">
-        <button class="btn" style="background:#28a745; flex:1;" id="download-trigger">直接下載</button>
-        <button class="btn" style="background:#444; flex:1;" onclick="closeResult()">返回</button>
-    </div>
-    <p style="font-size:12px; margin-top:10px; color:#aaa;">若無法下載，請「長按圖片」儲存</p>
+    <button class="btn" style="background:#444; width:220px;" onclick="closeResult()">返回目錄</button>
+    <p style="font-size:12px; margin-top:10px; color:#aaa;">請「長按圖片」儲存至手機相簿</p>
 </div>
 
 <script>
     let stream, photos = [], activeIdx = -1, lastLoc = "台北市";
+    let facingMode = "environment";
     let state = { x: 0, y: 0, s: 1, r: 0 };
     let touches = {};
     const video = document.getElementById('v');
     const wrapper = document.getElementById('stamp-wrapper');
 
     async function initCam() {
-        if (stream) { stream.getTracks().forEach(t => t.stop()); }
+        if (stream) stream.getTracks().forEach(t => t.stop());
         try {
             stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment", width: { ideal: 1920 } } 
+                video: { facingMode: facingMode, width: { ideal: 1920 } } 
             });
             video.srcObject = stream;
-            // iOS 必須在 play 後觸發
             await video.play();
-        } catch(e) { console.warn("Camera Error"); }
+        } catch(e) { alert("無法開啟相機，請檢查權限"); }
         updateLoc();
+    }
+
+    function flipCam() {
+        facingMode = (facingMode === "user") ? "environment" : "user";
+        initCam();
     }
 
     function updateLoc() {
@@ -138,7 +146,7 @@
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=zh-TW`);
                 const d = await res.json();
-                lastLoc = d.address.suburb || d.address.town || d.address.district || "台北市";
+                lastLoc = d.address.suburb || d.address.town || "台北市";
                 document.getElementById('current-loc').innerText = `📍 ${lastLoc}`;
             } catch(e) {}
         });
@@ -156,7 +164,7 @@
         } else {
             document.getElementById('btn-list').classList.add('active');
             document.getElementById('ctrl-cam').style.display = 'none';
-            document.getElementById('ctrl-edit').style.display = (p==='editor'?'flex':'none');
+            document.getElementById('ctrl-edit').style.display = (p==='editor' ? 'flex' : 'none');
             if(p==='list') renderList();
         }
     }
@@ -168,20 +176,15 @@
 
     async function snap() {
         const c = document.createElement('canvas');
-        c.width = video.videoWidth; 
-        c.height = video.videoHeight;
+        c.width = video.videoWidth; c.height = video.videoHeight;
         c.getContext('2d').drawImage(video, 0, 0);
-        
         addPhoto(c.toDataURL('image/jpeg', 0.85));
         
-        // 解決凍結的核心：稍微暫停後立刻恢復
+        // 瞬間閃爍並重新啟動防止凍結
         const stage = document.getElementById('cam-stage');
         stage.style.opacity = '0.3';
-        video.pause();
-        setTimeout(async () => {
-            await video.play();
-            stage.style.opacity = '1';
-        }, 60);
+        setTimeout(() => stage.style.opacity = '1', 100);
+        alert("已存入目錄");
     }
 
     function importPhoto(e) {
@@ -207,13 +210,14 @@
         activeIdx = i;
         document.getElementById('photo-preview').src = photos[i].src;
         document.getElementById('stamp-label').innerText = `${photos[i].loc} ${photos[i].date}`;
+        // 重置郵戳狀態
         state = { x: 0, y: 0, s: 1, r: 0 };
         wrapper.style.display = 'flex';
         updateUI();
         nav('editor');
     }
 
-    // 手勢縮放
+    // 觸控手勢
     let initialDist = 0, initialAngle = 0, initialScale = 1, initialRot = 0;
     wrapper.addEventListener('pointerdown', e => {
         e.preventDefault();
@@ -225,6 +229,7 @@
             initialScale = state.s; initialRot = state.r;
         }
     });
+
     window.addEventListener('pointermove', e => {
         if (!touches[e.pointerId]) return;
         touches[e.pointerId] = e;
@@ -239,6 +244,7 @@
         }
         requestAnimationFrame(updateUI);
     });
+
     window.addEventListener('pointerup', e => delete touches[e.pointerId]);
     function updateUI() { wrapper.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.s}) rotate(${state.r}deg)`; }
 
@@ -277,30 +283,25 @@
 
         const pRect = photo.getBoundingClientRect();
         const wRect = wrapper.getBoundingClientRect();
+        
+        // 修正 Y 軸定位：計算郵戳中心相對於照片頂部的百分比
         const centerX = (wRect.left + wRect.width/2 - pRect.left) / pRect.width;
-        const centerY = (wRect.top + (wRect.height-20)/2 - pRect.top) / pRect.height;
+        const centerY = (wRect.top + (wRect.height - 25)/2 - pRect.top) / pRect.height;
         const finalScale = (wRect.width / pRect.width) * canvas.width;
         
         ctx.save();
         ctx.translate(canvas.width * centerX, canvas.height * centerY);
         ctx.rotate(state.r * Math.PI / 180);
         ctx.drawImage(stamp, -finalScale/2, -finalScale/2, finalScale, finalScale);
+        
         ctx.fillStyle = "#ff3b30";
         ctx.font = `bold ${finalScale * 0.12}px sans-serif`;
         ctx.textAlign = "center";
         ctx.fillText(document.getElementById('stamp-label').innerText, 0, finalScale/2 + (finalScale * 0.2));
         ctx.restore();
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        document.getElementById('result-img').src = dataUrl;
+        document.getElementById('result-img').src = canvas.toDataURL('image/jpeg', 0.9);
         document.getElementById('result-overlay').style.display = 'flex';
-        
-        document.getElementById('download-trigger').onclick = () => {
-            const link = document.createElement('a');
-            link.download = `PostStamp_${Date.now()}.jpg`;
-            link.href = dataUrl;
-            link.click();
-        };
     }
 
     function closeResult() {
