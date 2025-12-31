@@ -3,34 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Stable Cam</title>
+    <title>Stamp Pro - FullScreen</title>
     <style>
-        :root { --accent: #00ffff; --cx: 50%; --cy: 50%; }
+        :root { --accent: #00ffff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
         html, body { margin: 0; padding: 0; height: 100dvh; overflow: hidden; background: #000; color: white; font-family: -apple-system, sans-serif; }
 
-        .app-container { display: flex; flex-direction: column; height: 100%; }
-        .top-nav { display: flex; background: #1a1a1a; padding: 10px; gap: 10px; border-bottom: 1px solid #333; z-index: 1000; touch-action: auto; }
-        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #333; color: #888; font-weight: bold; }
-        .nav-btn.active { background: #444; color: var(--accent); }
+        .app-container { display: flex; flex-direction: column; height: 100%; position: relative; }
 
-        .main-content { flex: 1; position: relative; overflow: hidden; background: #000; }
+        /* 頂部導航 - 改為半透明懸浮 */
+        .top-nav { 
+            position: absolute; top: 0; left: 0; right: 0; display: flex; 
+            background: rgba(0,0,0,0.4); padding: 10px; gap: 10px; z-index: 1000; 
+            backdrop-filter: blur(5px);
+        }
+        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(50,50,50,0.6); color: #ccc; font-weight: bold; }
+        .nav-btn.active { background: rgba(255,255,255,0.2); color: var(--accent); border-color: var(--accent); }
+
+        .main-content { flex: 1; position: relative; overflow: hidden; }
         .page { display: none; width: 100%; height: 100%; position: relative; }
-        .page.active { display: flex; flex-direction: column; }
+        .page.active { display: flex; }
 
-        /* 拍照區：解決遮蔽與凍結 */
-        #cam-stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; background: #000; }
-        video { width: 100%; height: 100%; object-fit: contain; } /* 確保看到完整畫面 */
-        .flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 999; }
-
+        /* 真正全螢幕相機 */
+        #cam-stage { width: 100%; height: 100%; background: #000; }
+        video { width: 100%; height: 100%; object-fit: cover; } 
+        
         #guide-ring { 
             position: absolute; width: 150px; height: 150px; border: 2px dashed var(--accent); border-radius: 50%; 
-            left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); pointer-events: none; z-index: 500; 
+            left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 500; 
         }
 
-        /* 編輯區 */
-        #edit-stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; background: #111; overflow: hidden; }
-        #photo-preview { max-width: 100%; max-height: 100%; object-fit: contain; z-index: 10; pointer-events: none; }
+        /* 編輯區域 */
+        #edit-stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #111; overflow: hidden; }
+        #photo-preview { max-width: 100%; max-height: 100%; object-fit: contain; }
 
         #stamp-wrapper { 
             position: absolute; width: 140px; display: none; flex-direction: column; align-items: center; 
@@ -42,46 +47,52 @@
             padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30;
         }
 
-        .gps-info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--accent); z-index: 600; }
+        .gps-info { position: absolute; top: 75px; left: 15px; background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--accent); z-index: 600; }
 
-        /* 底部面板 */
-        .bottom-panel { background: #000; border-top: 1px solid #333; padding: 15px; min-height: 130px; display: flex; align-items: center; justify-content: center; touch-action: auto; }
+        /* 底部控制面板 - 改為半透明懸浮 */
+        .bottom-panel { 
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8)); 
+            padding: 30px 15px calc(30px + env(safe-area-inset-bottom)); 
+            display: flex; align-items: center; justify-content: center; z-index: 1000;
+        }
         .ctrl-group { display: none; align-items: center; justify-content: space-around; width: 100%; max-width: 400px; }
-        .shutter { width: 75px; height: 75px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
-        .icon-btn { width: 50px; height: 50px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; border: 1px solid #444; }
+        .shutter { width: 80px; height: 80px; background: #ff3b30; border: 6px solid #fff; border-radius: 50%; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        .icon-btn { width: 50px; height: 50px; background: rgba(255,255,255,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); }
         
-        .edit-btns { display: none; width: 100%; flex-direction: column; gap: 8px; }
-        .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; color: white; }
+        .edit-btns { display: none; width: 100%; flex-direction: column; gap: 10px; }
+        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
         #result-overlay { 
             position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; 
-            display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; touch-action: auto;
+            display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; 
         }
-        #result-img { max-width: 100%; max-height: 70%; border: 1px solid #555; margin-bottom: 20px; }
+        #result-img { max-width: 100%; max-height: 70%; border: 1px solid #444; margin-bottom: 20px; }
 
-        #list-view { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; overflow-y: auto; touch-action: pan-y; }
-        .thumb { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; }
-        .thumb img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+        #list-view { padding: 80px 10px 150px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; overflow-y: auto; }
+        .thumb { background: #222; border-radius: 12px; overflow: hidden; border: 1px solid #333; aspect-ratio: 3/4; }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
     <div class="top-nav">
-        <button class="nav-btn active" id="btn-camera" onclick="nav('camera')">📸 拍照</button>
+        <button class="nav-btn active" id="btn-camera" onclick="nav('camera')">📸 拍攝</button>
         <button class="nav-btn" id="btn-list" onclick="nav('list')">📁 待處理 (<span id="count">0</span>)</button>
     </div>
 
     <div class="main-content">
         <div id="page-camera" class="page active">
-            <div id="cam-stage" onpointermove="moveGuide(event)">
-                <div class="flash-overlay" id="flash"></div>
-                <div class="gps-info" id="current-loc">📍 定位搜尋中...</div>
+            <div id="cam-stage">
+                <div class="gps-info" id="current-loc">📍 定位中...</div>
                 <video id="v" autoplay playsinline muted></video>
                 <div id="guide-ring"></div>
             </div>
         </div>
+        
         <div id="page-list" class="page"><div id="list-view"></div></div>
+        
         <div id="page-editor" class="page">
             <div id="edit-stage">
                 <img id="photo-preview">
@@ -101,9 +112,9 @@
             <input type="file" id="album-input" hidden accept="image/*" onchange="importPhoto(event)">
         </div>
         <div id="ctrl-edit" class="edit-btns">
-            <button class="btn" style="background:#007bff;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">1. 複製郵戳圖</button>
+            <button class="btn" style="background:#007bff;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">1. 選取郵戳</button>
             <button class="btn" style="background:#333;" onclick="processClipboard()">2. 帶回郵戳</button>
-            <button class="btn" style="background:#ff3b30;" onclick="saveFinal()">3. 生成照片</button>
+            <button class="btn" style="background:#ff3b30;" onclick="saveFinal()">3. 完成存檔</button>
         </div>
     </div>
 </div>
@@ -112,7 +123,7 @@
     <h3 style="color:var(--accent)">合成完成</h3>
     <img id="result-img">
     <button class="btn" style="background:#444; width:220px;" onclick="closeResult()">返回目錄</button>
-    <p style="font-size:12px; margin-top:10px; color:#aaa;">請「長按圖片」儲存至相簿</p>
+    <p style="font-size:12px; margin-top:15px; color:#aaa;">長按圖片儲存至相簿</p>
 </div>
 
 <script>
@@ -124,14 +135,22 @@
     const wrapper = document.getElementById('stamp-wrapper');
 
     async function initCam() {
-        if (stream) stream.getTracks().forEach(t => t.stop());
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+        }
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: facingMode, width: { ideal: 1920 } } 
-            });
+            const constraints = { 
+                video: { 
+                    facingMode: facingMode,
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                } 
+            };
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
-            video.onloadedmetadata = () => video.play();
-        } catch(e) { console.error("Camera access denied"); }
+            // 確保 iOS 上正確播放
+            await video.play();
+        } catch(e) { console.error("Camera Init Failed"); }
         updateLoc();
     }
 
@@ -148,7 +167,7 @@
                 lastLoc = d.address.suburb || d.address.town || "台北市";
                 document.getElementById('current-loc').innerText = `📍 ${lastLoc}`;
             } catch(e) {}
-        }, null, { enableHighAccuracy: true });
+        });
     }
 
     function nav(p) {
@@ -169,25 +188,19 @@
         }
     }
 
-    function moveGuide(e) {
-        document.documentElement.style.setProperty('--cx', e.clientX + 'px');
-        document.documentElement.style.setProperty('--cy', e.clientY + 'px');
-    }
-
     async function snap() {
-        // 快門動畫
-        const flash = document.getElementById('flash');
-        flash.style.opacity = '1';
-        setTimeout(() => flash.style.opacity = '0', 100);
-
+        // 1. 先截圖
         const c = document.createElement('canvas');
-        c.width = video.videoWidth; c.height = video.videoHeight;
+        c.width = video.videoWidth; 
+        c.height = video.videoHeight;
         c.getContext('2d').drawImage(video, 0, 0);
         addPhoto(c.toDataURL('image/jpeg', 0.85));
 
-        // 核心修正：拍照後強制重啟 Video 播放以防止凍結
-        video.pause();
-        setTimeout(() => video.play(), 150);
+        // 2. 解決凍結的核心：重啟串流
+        video.style.opacity = '0';
+        await initCam(); // 重新啟動硬體串流
+        video.style.opacity = '1';
+        
         alert("已存入目錄");
     }
 
@@ -220,7 +233,7 @@
         nav('editor');
     }
 
-    // 手勢縮放與移動
+    // 手勢操作
     let initialDist = 0, initialAngle = 0, initialScale = 1, initialRot = 0;
     wrapper.addEventListener('pointerdown', e => {
         e.preventDefault();
@@ -287,7 +300,6 @@
         const pRect = photo.getBoundingClientRect();
         const wRect = wrapper.getBoundingClientRect();
         
-        // 修正 Y 軸定位，確保郵戳可以置於底部
         const centerX = (wRect.left + wRect.width/2 - pRect.left) / pRect.width;
         const centerY = (wRect.top + (wRect.height - 20)/2 - pRect.top) / pRect.height;
         const finalScale = (wRect.width / pRect.width) * canvas.width;
