@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Ultra Stable</title>
+    <title>Stamp Pro - Final Fix</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; --cr: 80px; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -11,65 +11,41 @@
         
         /* 導覽列 */
         .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 9000; }
-        .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; transition: 0.3s; }
+        .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
 
         .page { display: none; flex: 1; position: relative; overflow: hidden; flex-direction: column; }
         .page.active { display: flex; }
 
-        /* 相機視景與圓框 */
+        /* 相機與圓框 */
         #viewport { position: relative; flex: 1; background: #000; overflow: hidden; z-index: 100; }
         #bg-video { width: 100%; height: 100%; object-fit: cover; }
-        #guide-overlay { 
-            position: absolute; inset: 0; z-index: 110; pointer-events: none; 
-            background: rgba(0, 0, 0, 0.4); 
-            mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%);
-            -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%);
-        }
-        #guide-border { 
-            position: absolute; width: calc(var(--cr) * 2); height: calc(var(--cr) * 2); 
-            left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); 
-            border: 3px dashed var(--accent); border-radius: 50%; z-index: 111; pointer-events: none;
-        }
+        #guide-overlay { position: absolute; inset: 0; z-index: 110; pointer-events: none; background: rgba(0,0,0,0.4); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
+        #guide-border { position: absolute; width: calc(var(--cr)*2); height: calc(var(--cr)*2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; z-index: 111; pointer-events: none; }
 
         /* 底部面板 */
         .ui-panel { background: #000; border-top: 1px solid #333; padding-bottom: env(safe-area-inset-bottom); z-index: 8000; }
         .ui-content { display: flex; justify-content: space-around; align-items: center; padding: 20px 0; }
-        #shutter-btn { width: 75px; height: 75px; background: #ff3b30; border: 6px solid #fff; border-radius: 50%; box-shadow: 0 0 15px rgba(255,0,0,0.5); }
+        #shutter-btn { width: 75px; height: 75px; background: #ff3b30; border: 6px solid #fff; border-radius: 50%; }
 
         /* 編輯器 */
         #edit-stage { flex: 1; position: relative; background: #080808; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
         #edit-preview { max-width: 100%; max-height: 100%; object-fit: contain; z-index: 50; }
         #edit-stamp { position: absolute; width: 150px; height: 150px; transform: translate(-50%, -50%); z-index: 500; touch-action: none; }
-        #edit-stamp img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8)); }
+        #edit-stamp img { width: 100%; height: 100%; object-fit: contain; }
         .stamp-label { position: absolute; bottom: -35px; left: 50%; transform: translateX(-50%); color: #ff3b30; font-weight: 900; white-space: nowrap; font-size: 16px; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; }
 
         /* 目錄 */
-        #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; flex: 1; }
-        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; border: 1px solid #111; position: relative; }
+        #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; }
+        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; border: 1px solid #111; }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* 風景郵戳小視窗 */
-        #browser-overlay { position: absolute; inset: 0; background: #000; z-index: 10000; display: none; flex-direction: column; }
     </style>
 </head>
 <body>
 
-<div id="browser-overlay">
-    <div style="background:#222; padding:15px; display:flex; justify-content:space-between; align-items:center;">
-        <button onclick="closeBrowser()" style="color:#fff; background:none; border:none; font-size:16px;">✕ 關閉</button>
-        <b style="font-size:14px;">選取風景郵戳</b>
-        <button onclick="confirmStamp()" style="color:var(--accent); background:none; border:none; font-weight:bold; font-size:16px;">✔ 完成</button>
-    </div>
-    <div style="background:#444; color:#fff; font-size:11px; padding:8px; text-align:center;">
-        請在網頁找到喜歡的郵戳圖，長按並「拷貝連結」後按下確定
-    </div>
-    <iframe id="web-frame" style="flex:1; border:none; background:white;"></iframe>
-</div>
-
 <div class="nav-tabs">
-    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝拍照</div>
-    <div class="tab" id="tab-gal" onclick="showPage('gallery')">📂 照片目錄 <span id="count">(0)</span></div>
+    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝視景</div>
+    <div class="tab" id="tab-gal" onclick="showPage('gallery')">📂 待辦目錄 <span id="count">(0)</span></div>
 </div>
 
 <div id="page-camera" class="page active">
@@ -101,38 +77,33 @@
     </div>
     <div class="ui-panel">
         <div class="ui-content" style="padding:15px 10px; gap:12px;">
-            <button onclick="openBrowser()" style="flex:1; padding:18px; background:#333; color:white; border:none; border-radius:12px; font-weight:bold;">選擇風景郵戳</button>
-            <button onclick="saveResult()" style="flex:1; padding:18px; background:var(--accent); color:black; border:none; border-radius:12px; font-weight:bold;">組合完成儲存</button>
+            <button onclick="pickOnlineStamp()" style="flex:1; padding:18px; background:#333; color:white; border:none; border-radius:12px; font-weight:bold;">開啟風景郵戳庫</button>
+            <button onclick="saveFinal()" style="flex:1; padding:18px; background:var(--accent); color:black; border:none; border-radius:12px; font-weight:bold;">組合完成儲存</button>
         </div>
     </div>
 </div>
 
 <script>
-    let db, currentFacing = "environment", circlePos = { x: 0.5, y: 0.5 };
+    let db, currentFacing = "environment", circlePos = { x: 0.5, y: 0.5 }, activeStream = null;
     const video = document.getElementById('bg-video');
 
-    // 1. 初始化資料庫 (加上版本號確保清理舊資料)
-    const dbReq = indexedDB.open("StampFinalSafe", 2);
-    dbReq.onupgradeneeded = e => {
-        const d = e.target.result;
-        if (!d.objectStoreNames.contains("archive")) d.createObjectStore("archive", { autoIncrement: true });
-    };
+    // 初始化 DB
+    const dbReq = indexedDB.open("StampFinalV10", 1);
+    dbReq.onupgradeneeded = e => e.target.result.createObjectStore("archive", { autoIncrement: true });
     dbReq.onsuccess = e => { db = e.target.result; updateBadge(); };
 
-    // 2. 相機穩定啟動
+    // 相機啟動與防凍結
     async function startCam() {
-        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+        if (activeStream) activeStream.getTracks().forEach(t => t.stop());
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
+            activeStream = await navigator.mediaDevices.getUserMedia({ 
                 video: { facingMode: currentFacing, width: { ideal: 1920 } } 
             });
-            video.srcObject = stream;
-            video.setAttribute("playsinline", true);
+            video.srcObject = activeStream;
             video.play();
-        } catch (e) { alert("請授權相機權限後重新載入。"); }
+        } catch (e) { alert("無法開啟相機"); }
     }
 
-    // 3. 拍照與定位圓框
     function moveCircle(e) {
         const rect = document.getElementById('viewport').getBoundingClientRect();
         const touch = e.touches[0];
@@ -146,44 +117,35 @@
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
-        
-        const data = {
-            img: canvas.toDataURL('image/jpeg', 0.8),
-            cx: circlePos.x,
-            cy: circlePos.y,
-            date: "2025.12.31",
-            loc: "北投區"
-        };
-
-        const tx = db.transaction("archive", "readwrite");
-        tx.objectStore("archive").add(data).onsuccess = () => {
+        const data = { img: canvas.toDataURL('image/jpeg', 0.8), cx: circlePos.x, cy: circlePos.y, date: "2025.12.31", loc: "北投區" };
+        db.transaction("archive", "readwrite").objectStore("archive").add(data).onsuccess = () => {
             updateBadge();
-            // 關鍵：拍照後立刻喚醒相機
-            setTimeout(() => video.play(), 200);
-            alert("照片已成功捕捉！");
+            startCam(); // 拍照後立刻重啟相機流，防止凍結
+            alert("拍照成功！");
         };
     }
 
-    // 4. 目錄與編輯器反應修正
+    // 目錄渲染：修正點選無反應
     function renderGallery() {
         const grid = document.getElementById('gallery-grid');
         grid.innerHTML = '';
-        const tx = db.transaction("archive", "readonly");
-        tx.objectStore("archive").openCursor().onsuccess = e => {
+        db.transaction("archive", "readonly").objectStore("archive").openCursor().onsuccess = e => {
             const cursor = e.target.result;
             if (cursor) {
-                const item = document.createElement('div');
-                item.className = 'gallery-item';
-                // 儲存當前數據快照
-                const currentData = JSON.parse(JSON.stringify(cursor.value));
-                item.innerHTML = `<img src="${currentData.img}">`;
-                item.onclick = (evt) => {
-                    evt.stopPropagation();
-                    openEditor(currentData);
-                };
-                grid.appendChild(item);
+                const id = cursor.key;
+                const thumb = cursor.value.img;
+                const div = document.createElement('div');
+                div.className = 'gallery-item';
+                div.innerHTML = `<img src="${thumb}" onclick="loadPhotoToEditor(${id})">`;
+                grid.appendChild(div);
                 cursor.continue();
             }
+        };
+    }
+
+    function loadPhotoToEditor(id) {
+        db.transaction("archive", "readonly").objectStore("archive").get(id).onsuccess = e => {
+            openEditor(e.target.result);
         };
     }
 
@@ -192,7 +154,6 @@
         img.src = data.img;
         document.getElementById('stamp-text').innerText = `${data.loc} ${data.date}`;
         showPage('editor');
-        
         img.onload = () => {
             const stage = document.getElementById('edit-stage').getBoundingClientRect();
             const ir = img.naturalWidth / img.naturalHeight;
@@ -200,42 +161,37 @@
             let rw, rh;
             if (ir > sr) { rw = stage.width; rh = stage.width / ir; }
             else { rh = stage.height; rw = stage.height * ir; }
-            
             const s = document.getElementById('edit-stamp');
-            const ox = (stage.width - rw) / 2;
-            const oy = (stage.height - rh) / 2;
-            s.style.left = (ox + rw * data.cx) + 'px';
-            s.style.top = (oy + rh * data.cy) + 'px';
+            const ox = (stage.width - rw) / 2; const oy = (stage.height - rh) / 2;
+            s.style.left = (ox + rw * data.cx) + 'px'; s.style.top = (oy + rh * data.cy) + 'px';
         };
     }
 
-    // 5. 風景郵戳與合成去背
-    function openBrowser() {
-        const frame = document.getElementById('web-frame');
-        if (!frame.src) frame.src = "https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508";
-        document.getElementById('browser-overlay').style.display = 'flex';
-    }
-    function closeBrowser() { document.getElementById('browser-overlay').style.display = 'none'; }
-    function confirmStamp() {
-        const url = prompt("請在下方輸入郵戳圖片網址：");
-        if (url && url.startsWith('http')) document.getElementById('current-stamp-img').src = url;
-        closeBrowser();
+    // 郵戳處理：改為外部開啟避免白畫面
+    function pickOnlineStamp() {
+        alert("將開啟郵政官網，請選定郵戳後「長按圖片」選擇「拷貝連結」，再回來貼上。");
+        window.open("https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508", "_blank");
+        setTimeout(() => {
+            const url = prompt("請貼上拷貝的郵戳圖片連結：");
+            if (url && url.startsWith('http')) {
+                document.getElementById('current-stamp-img').src = url;
+            }
+        }, 1000);
     }
 
     // 郵戳拖移
-    document.getElementById('edit-stamp').addEventListener('touchmove', e => {
+    document.getElementById('edit-stamp').ontouchmove = e => {
         const stage = document.getElementById('edit-stage').getBoundingClientRect();
         e.currentTarget.style.left = (e.touches[0].clientX - stage.left) + 'px';
         e.currentTarget.style.top = (e.touches[0].clientY - stage.top) + 'px';
-    });
+    };
 
-    async function saveResult() {
+    async function saveFinal() {
         const pImg = document.getElementById('edit-preview');
         const sImg = document.getElementById('current-stamp-img');
         const cvs = document.createElement('canvas');
         cvs.width = pImg.naturalWidth; cvs.height = pImg.naturalHeight;
         const ctx = cvs.getContext('2d');
-        
         ctx.drawImage(pImg, 0, 0);
         
         const stage = document.getElementById('edit-stage').getBoundingClientRect();
@@ -246,13 +202,10 @@
 
         ctx.save();
         ctx.translate(cvs.width * rx, cvs.height * ry);
-        // 去除白底核心：Multiply 模式
-        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalCompositeOperation = 'multiply'; // 去白底
         ctx.drawImage(sImg, -sz/2, -sz/2, sz, sz);
         ctx.restore();
 
-        // 加註文字
-        ctx.globalCompositeOperation = 'source-over';
         ctx.fillStyle = "#ff3b30";
         ctx.font = `bold ${cvs.width * 0.03}px sans-serif`;
         ctx.textAlign = "center";
@@ -264,7 +217,6 @@
         a.click();
     }
 
-    // 通用
     function showPage(p) {
         document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
