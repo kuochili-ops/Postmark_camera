@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Fix All</title>
+    <title>Stamp Pro - TW & JP</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
@@ -11,47 +11,41 @@
 
         .app-container { display: flex; flex-direction: column; height: 100%; position: relative; }
 
-        /* 頂部半透明導航 */
+        /* 頂部導航 */
         .top-nav { 
             position: absolute; top: 0; left: 0; right: 0; display: flex; 
-            background: rgba(0,0,0,0.5); padding: 10px; gap: 10px; z-index: 1000; 
-            backdrop-filter: blur(10px);
+            background: rgba(0,0,0,0.6); padding: 10px; gap: 10px; z-index: 1000; backdrop-filter: blur(10px);
         }
-        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; font-weight: bold; }
+        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; font-weight: bold; font-size: 14px; }
         .nav-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(0,255,255,0.1); }
 
+        /* 內容區 */
         .main-content { flex: 1; position: relative; }
         .page { display: none; width: 100%; height: 100%; position: relative; }
         .page.active { display: block; }
 
-        /* 拍照區：點擊可移動圓框 */
-        #cam-stage { width: 100%; height: 100%; position: relative; background: #000; }
-        video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; } 
-        
-        /* 圓框：確保在 video 之上 */
+        /* 拍照區：解決凍結與定位 */
+        #cam-stage { width: 100%; height: 100%; background: #000; position: relative; }
+        video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
         #guide-ring { 
-            position: absolute; width: 140px; height: 140px; border: 3px dashed var(--accent); border-radius: 50%; 
-            left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); 
-            pointer-events: none; z-index: 800; 
+            position: absolute; width: 150px; height: 150px; border: 3px dashed var(--accent); border-radius: 50%; 
+            left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); pointer-events: none; z-index: 800; 
         }
 
         /* 編輯區 */
-        #edit-stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #111; position: relative; }
+        #edit-stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #111; overflow: hidden; }
         #photo-preview { max-width: 100%; max-height: 100%; object-fit: contain; }
-
         #stamp-wrapper { 
-            position: absolute; width: 140px; display: none; flex-direction: column; align-items: center; 
-            z-index: 900; will-change: transform;
+            position: absolute; width: 150px; display: none; flex-direction: column; align-items: center; 
+            z-index: 900; will-change: transform; cursor: move;
         }
         #stamp-img { width: 100%; height: auto; mix-blend-mode: multiply; pointer-events: none; }
         .stamp-tag { 
             color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(255,255,255,0.8); 
-            padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30;
+            padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30; text-align: center;
         }
 
-        .gps-info { position: absolute; top: 75px; left: 15px; background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--accent); z-index: 1000; }
-
-        /* 底部控制區 */
+        /* 底部控制面板 */
         .bottom-panel { 
             position: absolute; bottom: 0; left: 0; right: 0;
             background: linear-gradient(transparent, rgba(0,0,0,0.9)); 
@@ -59,17 +53,16 @@
             display: flex; align-items: center; justify-content: center; z-index: 1100;
         }
         .ctrl-group { display: none; align-items: center; justify-content: space-around; width: 100%; max-width: 400px; }
-        .shutter { width: 75px; height: 75px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; box-shadow: 0 0 15px rgba(255,59,48,0.5); }
-        .icon-btn { width: 50px; height: 50px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px); }
+        .shutter { width: 75px; height: 75px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
+        .icon-btn { width: 50px; height: 50px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid rgba(255,255,255,0.2); }
         
-        .edit-btns { display: none; width: 100%; flex-direction: column; gap: 10px; }
-        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; color: white; }
+        /* 編輯按鈕群 */
+        .edit-btns { display: none; width: 100%; flex-direction: column; gap: 8px; }
+        .source-row { display: flex; gap: 8px; width: 100%; }
+        .btn { flex: 1; padding: 14px; border-radius: 12px; border: none; font-weight: bold; font-size: 14px; color: white; }
 
-        #result-overlay { 
-            position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; 
-            display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; 
-        }
-        #result-img { max-width: 100%; max-height: 70%; border: 1px solid #444; margin-bottom: 20px; border-radius: 4px; }
+        #result-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        #result-img { max-width: 100%; max-height: 70%; border: 1px solid #444; border-radius: 4px; }
 
         #list-view { padding: 80px 10px 150px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; overflow-y: auto; }
         .thumb { background: #222; border-radius: 10px; overflow: hidden; border: 1px solid #333; aspect-ratio: 3/4; }
@@ -87,7 +80,6 @@
     <div class="main-content">
         <div id="page-camera" class="page active">
             <div id="cam-stage" onpointerdown="moveGuide(event)" onpointermove="moveGuide(event)">
-                <div class="gps-info" id="current-loc">📍 定位搜尋中...</div>
                 <video id="v" autoplay playsinline muted></video>
                 <div id="guide-ring"></div>
             </div>
@@ -100,7 +92,7 @@
                 <img id="photo-preview">
                 <div id="stamp-wrapper">
                     <img id="stamp-img">
-                    <div class="stamp-tag" id="stamp-label"></div>
+                    <div class="stamp-tag" id="stamp-label" contenteditable="true">地點與日期</div>
                 </div>
             </div>
         </div>
@@ -114,65 +106,47 @@
             <input type="file" id="album-input" hidden accept="image/*" onchange="importPhoto(event)">
         </div>
         <div id="ctrl-edit" class="edit-btns">
-            <button class="btn" style="background:#007bff;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">1. 選取郵戳</button>
-            <button class="btn" style="background:#333;" onclick="processClipboard()">2. 帶回郵戳</button>
-            <button class="btn" style="background:#ff3b30;" onclick="saveFinal()">3. 生成照片</button>
+            <div class="source-row">
+                <button class="btn" style="background:#007b43;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">🇹🇼 台灣郵戳</button>
+                <button class="btn" style="background:#ff3b30;" onclick="window.open('https://www.post.japanpost.jp/kitte_hagaki/stamp/fukeiin/', '_blank')">🇯🇵 日本郵戳</button>
+            </div>
+            <button class="btn" style="background:#333;" onclick="processClipboard()">📥 帶回並去背郵戳</button>
+            <button class="btn" style="background:var(--accent); color:#000;" onclick="saveFinal()">✅ 完成合成並存檔</button>
         </div>
     </div>
 </div>
 
 <div id="result-overlay">
-    <h3 style="color:var(--accent)">合成完畢</h3>
+    <h3 style="color:var(--accent)">合成完成</h3>
     <img id="result-img">
-    <button class="btn" style="background:#444; width:220px;" onclick="closeResult()">返回</button>
+    <button class="btn" style="background:#444; width:220px;" onclick="closeResult()">返回目錄</button>
     <p style="font-size:12px; margin-top:15px; color:#aaa;">長按上方圖片儲存至相簿</p>
 </div>
 
 <script>
-    let stream, photos = [], activeIdx = -1, lastLoc = "台北市";
-    let facingMode = "environment";
+    let stream, photos = [], activeIdx = -1, facingMode = "environment";
     let state = { x: 0, y: 0, s: 1, r: 0 };
     let touches = {};
     const video = document.getElementById('v');
     const wrapper = document.getElementById('stamp-wrapper');
 
     async function initCam() {
-        if (stream) {
-            stream.getTracks().forEach(t => t.stop());
-            video.srcObject = null;
-        }
+        if (stream) stream.getTracks().forEach(t => t.stop());
         try {
             stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { facingMode: facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } } 
             });
             video.srcObject = stream;
-            video.play().catch(e => console.log("Play failed"));
-        } catch(e) { console.error("Camera error"); }
-        updateLoc();
+            await video.play();
+        } catch(e) { console.error("Camera Error"); }
     }
 
-    function flipCam() {
-        facingMode = (facingMode === "user") ? "environment" : "user";
-        initCam();
-    }
-
-    function updateLoc() {
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=zh-TW`);
-                const d = await res.json();
-                lastLoc = d.address.suburb || d.address.town || d.address.district || "台北市";
-                document.getElementById('current-loc').innerText = `📍 ${lastLoc}`;
-            } catch(e) {}
-        });
-    }
+    function flipCam() { facingMode = (facingMode === "user") ? "environment" : "user"; initCam(); }
 
     function nav(p) {
         document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-        const target = document.getElementById('page-' + p);
-        if(target) target.classList.add('active');
-        
+        document.getElementById('page-' + p).classList.add('active');
         if (p === 'camera') {
             document.getElementById('btn-camera').classList.add('active');
             document.getElementById('ctrl-cam').style.display = 'flex';
@@ -187,45 +161,34 @@
     }
 
     function moveGuide(e) {
-        // 取得點擊位置並更新 CSS 變數
         document.documentElement.style.setProperty('--cx', e.clientX + 'px');
         document.documentElement.style.setProperty('--cy', e.clientY + 'px');
     }
 
     async function snap() {
-        // 擷取畫面
         const c = document.createElement('canvas');
-        c.width = video.videoWidth; 
-        c.height = video.videoHeight;
+        c.width = video.videoWidth; c.height = video.videoHeight;
         c.getContext('2d').drawImage(video, 0, 0);
-        addPhoto(c.toDataURL('image/jpeg', 0.85));
-
-        // 徹底修復凍結：閃動並徹底重啟串流
-        const stage = document.getElementById('cam-stage');
-        stage.style.opacity = '0';
+        const d = new Date();
+        photos.push({ src: c.toDataURL('image/jpeg', 0.85), date: `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` });
+        document.getElementById('count').innerText = photos.length;
         
-        // 停止舊流並在 150ms 後重啟
+        // 瞬間重啟防止凍結
         if (stream) stream.getTracks().forEach(t => t.stop());
-        setTimeout(async () => {
-            await initCam();
-            stage.style.opacity = '1';
-        }, 150);
-        
-        alert("拍照成功！已存至目錄");
+        setTimeout(initCam, 100);
+        alert("已擷取至目錄");
     }
 
     function importPhoto(e) {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (f) => { addPhoto(f.target.result); nav('list'); };
+        reader.onload = (f) => { 
+            photos.push({ src: f.target.result, date: "Imported" }); 
+            document.getElementById('count').innerText = photos.length;
+            nav('list'); 
+        };
         reader.readAsDataURL(file);
-    }
-
-    function addPhoto(src) {
-        const d = new Date();
-        photos.push({ src: src, loc: lastLoc, date: `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` });
-        document.getElementById('count').innerText = photos.length;
     }
 
     function renderList() {
@@ -236,26 +199,22 @@
     function goEdit(i) {
         activeIdx = i;
         document.getElementById('photo-preview').src = photos[i].src;
-        document.getElementById('stamp-label').innerText = `${photos[i].loc} ${photos[i].date}`;
+        document.getElementById('stamp-label').innerText = `地點 ${photos[i].date}`;
         state = { x: 0, y: 0, s: 1, r: 0 };
         wrapper.style.display = 'flex';
         updateUI();
         nav('editor');
     }
 
-    // 手勢處理（編輯模式）
-    let initialDist = 0, initialAngle = 0, initialScale = 1, initialRot = 0;
+    // 手勢操作
     wrapper.addEventListener('pointerdown', e => {
-        e.preventDefault();
-        touches[e.pointerId] = e;
-        const keys = Object.keys(touches);
-        if (keys.length === 2) {
+        e.preventDefault(); touches[e.pointerId] = e;
+        if (Object.keys(touches).length === 2) {
+            const keys = Object.keys(touches);
             initialDist = Math.hypot(touches[keys[0]].clientX - touches[keys[1]].clientX, touches[keys[0]].clientY - touches[keys[1]].clientY);
-            initialAngle = Math.atan2(touches[keys[1]].clientY - touches[keys[0]].clientY, touches[keys[1]].clientX - touches[keys[0]].clientX) * 180 / Math.PI;
-            initialScale = state.s; initialRot = state.r;
+            initialScale = state.s;
         }
     });
-
     window.addEventListener('pointermove', e => {
         if (!touches[e.pointerId]) return;
         touches[e.pointerId] = e;
@@ -264,15 +223,12 @@
             state.x += e.movementX; state.y += e.movementY;
         } else if (keys.length === 2) {
             const d = Math.hypot(touches[keys[0]].clientX - touches[keys[1]].clientX, touches[keys[0]].clientY - touches[keys[1]].clientY);
-            const a = Math.atan2(touches[keys[1]].clientY - touches[keys[0]].clientY, touches[keys[1]].clientX - touches[keys[0]].clientX) * 180 / Math.PI;
             state.s = Math.max(0.1, initialScale * (d / initialDist));
-            state.r = initialRot + (a - initialAngle);
         }
-        requestAnimationFrame(updateUI);
+        updateUI();
     });
-
     window.addEventListener('pointerup', e => delete touches[e.pointerId]);
-    function updateUI() { wrapper.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.s}) rotate(${state.r}deg)`; }
+    function updateUI() { wrapper.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.s})`; }
 
     async function processClipboard() {
         try {
@@ -287,21 +243,22 @@
                         const ctx = c.getContext('2d');
                         ctx.drawImage(img, 0, 0);
                         const id = ctx.getImageData(0,0,c.width,c.height);
-                        for(let i=0; i<id.data.length; i+=4) if(id.data[i]>225 && id.data[i+1]>225 && id.data[i+2]>225) id.data[i+3]=0;
+                        // 強化去背：針對日本網頁白底優化
+                        for(let i=0; i<id.data.length; i+=4) {
+                            if(id.data[i]>200 && id.data[i+1]>200 && id.data[i+2]>200) id.data[i+3]=0;
+                        }
                         ctx.putImageData(id,0,0);
                         document.getElementById('stamp-img').src = c.toDataURL();
                     };
                     img.src = URL.createObjectURL(blob);
                 }
             }
-        } catch(e) { alert("請先複製郵戳圖片"); }
+        } catch(e) { alert("請先複製郵戳圖案"); }
     }
 
     function saveFinal() {
         const photo = document.getElementById('photo-preview');
         const stamp = document.getElementById('stamp-img');
-        if(!stamp.src) return alert("請先帶回郵戳圖案");
-
         const canvas = document.createElement('canvas');
         canvas.width = photo.naturalWidth; canvas.height = photo.naturalHeight;
         const ctx = canvas.getContext('2d');
@@ -309,19 +266,17 @@
 
         const pRect = photo.getBoundingClientRect();
         const wRect = wrapper.getBoundingClientRect();
-        
         const centerX = (wRect.left + wRect.width/2 - pRect.left) / pRect.width;
-        const centerY = (wRect.top + (wRect.height - 20)/2 - pRect.top) / pRect.height;
+        const centerY = (wRect.top + (wRect.height-25)/2 - pRect.top) / pRect.height;
         const finalScale = (wRect.width / pRect.width) * canvas.width;
         
         ctx.save();
         ctx.translate(canvas.width * centerX, canvas.height * centerY);
-        ctx.rotate(state.r * Math.PI / 180);
         ctx.drawImage(stamp, -finalScale/2, -finalScale/2, finalScale, finalScale);
         ctx.fillStyle = "#ff3b30";
         ctx.font = `bold ${finalScale * 0.12}px sans-serif`;
         ctx.textAlign = "center";
-        ctx.fillText(document.getElementById('stamp-label').innerText, 0, finalScale/2 + (finalScale * 0.2));
+        ctx.fillText(document.getElementById('stamp-label').innerText, 0, finalScale/2 + (finalScale * 0.22));
         ctx.restore();
 
         document.getElementById('result-img').src = canvas.toDataURL('image/jpeg', 0.9);
