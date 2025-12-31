@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Anti-Freeze</title>
+    <title>Stamp Pro - iOS Fix</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
@@ -19,15 +19,14 @@
         .page.active { display: flex; flex-direction: column; }
 
         #cam-stage { position: relative; flex: 1; overflow: hidden; background: #000; transition: opacity 0.1s; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
         
-        /* 輔助定位圓框 */
         #guide-ring { 
-            position: absolute; width: 160px; height: 160px; border: 3px dashed var(--accent); border-radius: 50%; 
+            position: absolute; width: 150px; height: 150px; border: 3px dashed var(--accent); border-radius: 50%; 
             left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); pointer-events: none; z-index: 500; 
         }
 
-        #edit-stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #edit-stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; background: #111; }
         #photo-preview { width: 100%; height: 100%; object-fit: contain; z-index: 10; pointer-events: none; }
 
         #stamp-wrapper { 
@@ -37,16 +36,15 @@
         #stamp-img { width: 100%; height: auto; mix-blend-mode: multiply; pointer-events: none; }
         .stamp-tag { 
             color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(255,255,255,0.8); 
-            padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30;
+            padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30; pointer-events: none;
         }
 
         .gps-info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--accent); z-index: 600; }
 
-        .bottom-panel { background: #000; border-top: 1px solid #333; padding: 15px; min-height: 130px; display: flex; align-items: center; justify-content: center; touch-action: auto; }
+        .bottom-panel { background: #000; border-top: 1px solid #333; padding: 15px; min-height: 120px; display: flex; align-items: center; justify-content: center; touch-action: auto; }
         .shutter-box { display: flex; align-items: center; gap: 40px; }
-        .shutter { width: 75px; height: 75px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-        .shutter:active { transform: scale(0.9); }
-        .album-btn { width: 50px; height: 50px; background: #222; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #444; }
+        .shutter { width: 70px; height: 70px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
+        .album-btn { width: 45px; height: 45px; background: #222; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #444; }
         
         .btn-group { display: none; width: 100%; flex-direction: column; gap: 8px; }
         .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; color: white; }
@@ -55,10 +53,10 @@
             position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; 
             display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; touch-action: auto;
         }
-        #result-img { max-width: 100%; max-height: 75%; border: 1px solid #555; margin-bottom: 20px; }
+        #result-img { max-width: 100%; max-height: 65%; border: 1px solid #555; margin-bottom: 20px; }
 
         #list-view { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; overflow-y: auto; touch-action: pan-y; }
-        .thumb { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; position: relative; }
+        .thumb { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; }
         .thumb img { width: 100%; aspect-ratio: 1; object-fit: cover; }
     </style>
 </head>
@@ -67,7 +65,7 @@
 <div class="app-container">
     <div class="top-nav">
         <button class="nav-btn active" id="btn-camera" onclick="nav('camera')">📸 拍照</button>
-        <button class="nav-btn" id="btn-list" onclick="nav('list')">📁 目錄 (<span id="count">0</span>)</button>
+        <button class="nav-btn" id="btn-list" onclick="nav('list')">📁 待處理 (<span id="count">0</span>)</button>
     </div>
 
     <div class="main-content">
@@ -94,22 +92,25 @@
         <div id="ctrl-cam" class="shutter-box">
             <div class="album-btn" onclick="document.getElementById('album-input').click()">🖼️</div>
             <button class="shutter" onclick="snap()"></button>
-            <div style="width:50px"></div>
+            <div style="width:45px"></div>
             <input type="file" id="album-input" hidden accept="image/*" onchange="importPhoto(event)">
         </div>
         <div id="ctrl-edit" class="btn-group">
-            <button class="btn" style="background:#007bff;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">1. 複製郵戳圖</button>
+            <button class="btn" style="background:#007bff;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">1. 選取郵戳</button>
             <button class="btn" style="background:#333;" onclick="processClipboard()">2. 帶回郵戳</button>
-            <button class="btn" style="background:#ff3b30;" onclick="saveFinal()">3. 生成照片</button>
+            <button class="btn" style="background:#ff3b30;" onclick="saveFinal()">3. 完成存檔</button>
         </div>
     </div>
 </div>
 
 <div id="result-overlay">
-    <h3 style="color:var(--accent)">✅ 合成完成</h3>
-    <p>請「長按下方圖片」儲存至相簿</p>
+    <h3 style="color:var(--accent)">合成完成</h3>
     <img id="result-img">
-    <button class="btn" style="background:#444; width:200px;" onclick="closeResult()">返回目錄</button>
+    <div style="display:flex; gap:10px; width:100%;">
+        <button class="btn" style="background:#28a745; flex:1;" id="download-trigger">直接下載</button>
+        <button class="btn" style="background:#444; flex:1;" onclick="closeResult()">返回</button>
+    </div>
+    <p style="font-size:12px; margin-top:10px; color:#aaa;">若無法下載，請「長按圖片」儲存</p>
 </div>
 
 <script>
@@ -120,13 +121,15 @@
     const wrapper = document.getElementById('stamp-wrapper');
 
     async function initCam() {
-        if (stream) stream.getTracks().forEach(t => t.stop());
+        if (stream) { stream.getTracks().forEach(t => t.stop()); }
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment", width: { ideal: 1920 } } 
+            });
             video.srcObject = stream;
-            // 確保 video 播放
+            // iOS 必須在 play 後觸發
             await video.play();
-        } catch(e) { console.log("Cam Error"); }
+        } catch(e) { console.warn("Camera Error"); }
         updateLoc();
     }
 
@@ -135,7 +138,7 @@
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=zh-TW`);
                 const d = await res.json();
-                lastLoc = d.address.suburb || d.address.town || "台北市";
+                lastLoc = d.address.suburb || d.address.town || d.address.district || "台北市";
                 document.getElementById('current-loc').innerText = `📍 ${lastLoc}`;
             } catch(e) {}
         });
@@ -164,23 +167,21 @@
     }
 
     async function snap() {
-        const stage = document.getElementById('cam-stage');
         const c = document.createElement('canvas');
         c.width = video.videoWidth; 
         c.height = video.videoHeight;
         c.getContext('2d').drawImage(video, 0, 0);
         
-        addPhoto(c.toDataURL('image/jpeg', 0.8));
+        addPhoto(c.toDataURL('image/jpeg', 0.85));
         
-        // --- 強制重新啟動相機流以防止凍結 ---
-        stage.style.opacity = '0'; // 快門閃爍效果
+        // 解決凍結的核心：稍微暫停後立刻恢復
+        const stage = document.getElementById('cam-stage');
+        stage.style.opacity = '0.3';
         video.pause();
         setTimeout(async () => {
             await video.play();
             stage.style.opacity = '1';
-        }, 100);
-        
-        alert("已存入目錄");
+        }, 60);
     }
 
     function importPhoto(e) {
@@ -212,7 +213,7 @@
         nav('editor');
     }
 
-    // 手勢邏輯
+    // 手勢縮放
     let initialDist = 0, initialAngle = 0, initialScale = 1, initialRot = 0;
     wrapper.addEventListener('pointerdown', e => {
         e.preventDefault();
@@ -224,7 +225,6 @@
             initialScale = state.s; initialRot = state.r;
         }
     });
-
     window.addEventListener('pointermove', e => {
         if (!touches[e.pointerId]) return;
         touches[e.pointerId] = e;
@@ -232,15 +232,13 @@
         if (keys.length === 1) {
             state.x += e.movementX; state.y += e.movementY;
         } else if (keys.length === 2) {
-            const p1 = touches[keys[0]], p2 = touches[keys[1]];
-            const d = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
-            const a = Math.atan2(p2.clientY - p1.clientY, p2.clientX - p1.clientX) * 180 / Math.PI;
+            const d = Math.hypot(touches[keys[0]].clientX - touches[keys[1]].clientX, touches[keys[0]].clientY - touches[keys[1]].clientY);
+            const a = Math.atan2(touches[keys[1]].clientY - touches[keys[0]].clientY, touches[keys[1]].clientX - touches[keys[0]].clientX) * 180 / Math.PI;
             state.s = Math.max(0.1, initialScale * (d / initialDist));
             state.r = initialRot + (a - initialAngle);
         }
         requestAnimationFrame(updateUI);
     });
-
     window.addEventListener('pointerup', e => delete touches[e.pointerId]);
     function updateUI() { wrapper.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.s}) rotate(${state.r}deg)`; }
 
@@ -293,8 +291,16 @@
         ctx.fillText(document.getElementById('stamp-label').innerText, 0, finalScale/2 + (finalScale * 0.2));
         ctx.restore();
 
-        document.getElementById('result-img').src = canvas.toDataURL('image/jpeg', 0.9);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        document.getElementById('result-img').src = dataUrl;
         document.getElementById('result-overlay').style.display = 'flex';
+        
+        document.getElementById('download-trigger').onclick = () => {
+            const link = document.createElement('a');
+            link.download = `PostStamp_${Date.now()}.jpg`;
+            link.href = dataUrl;
+            link.click();
+        };
     }
 
     function closeResult() {
