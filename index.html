@@ -3,209 +3,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Visible Fix</title>
+    <title>Stamp Pro - Scenery Collector</title>
     <style>
-        :root { --cx: 50%; --cy: 50%; --cr: 75px; --accent: #00ffff; }
+        :root { --accent: #00ffff; --cx: 50%; --cy: 50%; --cr: 75px; }
         body { margin: 0; background: #000; overflow: hidden; font-family: -apple-system, sans-serif; height: 100dvh; display: flex; flex-direction: column; color: white; }
         
+        /* 導覽列 */
         .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 2000; }
-        .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; }
+        .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 13px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
 
         .page { display: none; flex: 1; position: relative; overflow: hidden; flex-direction: column; }
         .page.active { display: flex; }
 
-        /* 相機視景 */
-        #viewport { flex: 1; position: relative; background: #000; overflow: hidden; }
-        #bg-video { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* 編輯器舞台 - 修正照片不顯示問題 */
-        #edit-stage { 
-            flex: 1; 
-            position: relative; 
-            background: #111; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            overflow: hidden; 
-            touch-action: none;
+        /* 郵戳採集視窗 (小視窗) */
+        #browser-overlay { 
+            position: absolute; inset: 0; background: #000; z-index: 5000; 
+            display: none; flex-direction: column; 
         }
-        #edit-preview { 
-            display: block;
-            max-width: 100%; 
-            max-height: 100%; 
-            object-fit: contain; 
-            z-index: 10; /* 照片在底層 */
-            background: #000;
-        }
-        
-        #edit-stamp { 
-            position: absolute; 
-            width: 120px; 
-            height: 120px; 
-            transform: translate(-50%, -50%); 
-            touch-action: none;
-            z-index: 100; /* 郵戳在上層 */
-            pointer-events: auto;
-        }
-        #edit-stamp img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+        #browser-header { background: #222; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+        #web-frame { flex: 1; border: none; background: white; }
 
-        /* UI 面板 */
+        /* 編輯器佈局 */
+        #edit-stage { flex: 1; position: relative; background: #080808; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #edit-preview { max-width: 100%; max-height: 100%; object-fit: contain; z-index: 10; }
+        #edit-stamp { 
+            position: absolute; width: 140px; height: 140px; 
+            transform: translate(-50%, -50%); touch-action: none;
+            z-index: 100; border: 2px dashed rgba(255,255,255,0.3);
+        }
+        #edit-stamp img { width: 100%; height: 100%; object-fit: contain; }
+        
+        /* 郵戳文字標註 */
+        .stamp-meta { 
+            position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%);
+            white-space: nowrap; font-size: 10px; color: #ff3b30; font-weight: bold;
+            background: rgba(0,0,0,0.5); padding: 2px 5px; border-radius: 4px;
+        }
+
         .ui-panel { background: #000; border-top: 1px solid #333; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); }
         .ui-content { display: flex; justify-content: space-around; align-items: center; padding: 15px 0; }
-        #shutter-btn { width: 65px; height: 65px; border: 5px solid #fff; background: #f00; border-radius: 50%; }
-
-        .stamp-selector { display: flex; overflow-x: auto; gap: 15px; padding: 10px 20px; background: #111; border-top: 1px solid #222; height: 60px; }
-        .stamp-thumb { width: 45px; height: 45px; border-radius: 6px; border: 2px solid transparent; background: #222; padding: 3px; flex-shrink: 0; }
-        .stamp-thumb.active { border-color: var(--accent); }
-
-        #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; flex: 1; }
-        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; }
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .btn-main { background: var(--accent); color: #000; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; }
+        .btn-sub { background: #333; color: #fff; border: none; padding: 12px 20px; border-radius: 8px; }
     </style>
 </head>
 <body>
 
+<div id="browser-overlay">
+    <div id="browser-header">
+        <span style="font-size:14px;">中華郵政風景郵戳庫</span>
+        <button class="btn-main" onclick="closeBrowser()">完成選取並截取</button>
+    </div>
+    <div style="background:#444; padding:5px; font-size:10px; text-align:center;">
+        請找到目標郵戳圖案，長按圖片「複製圖片連結」或直接點選
+    </div>
+    <iframe id="web-frame" src="https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508"></iframe>
+</div>
+
 <div class="nav-tabs">
-    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝視景</div>
-    <div class="tab" id="tab-gal" onclick="showPage('gallery')">📂 待辦目錄 <span id="count">(0)</span></div>
+    <div class="tab active" id="tab-cam" onclick="showPage('camera')">📸 拍攝</div>
+    <div class="tab" id="tab-gal" onclick="showPage('gallery')">📂 目錄 <span id="count">(0)</span></div>
 </div>
 
 <div id="page-camera" class="page active">
-    <div id="viewport">
-        <video id="bg-video" autoplay playsinline muted></video>
-        <div id="guide-overlay" style="position:absolute; inset:0; z-index:100; pointer-events:none; background:rgba(0,0,0,0.4); mask-image:radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image:radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%);"></div>
-        <div id="guide-border" style="position:absolute; width:calc(var(--cr)*2); height:calc(var(--cr)*2); left:var(--cx); top:var(--cy); transform:translate(-50%,-50%); border:3px dashed var(--accent); border-radius:50%; z-index:101;"></div>
+    <div id="viewport" style="flex:1; position:relative; overflow:hidden;">
+        <video id="bg-video" style="width:100%; height:100%; object-fit:cover;" autoplay playsinline muted></video>
+        <div style="position:absolute; inset:0; border:2px solid var(--accent); opacity:0.3; pointer-events:none;"></div>
     </div>
     <div class="ui-panel">
         <div class="ui-content">
             <div onclick="toggleCamera()" style="font-size:24px;">🔄</div>
-            <div id="shutter-btn" onclick="capturePhoto()"></div>
-            <div onclick="document.getElementById('file-input').click()" style="font-size:24px;">📂</div>
+            <div id="shutter-btn" style="width:65px; height:65px; background:red; border:5px solid white; border-radius:50%;" onclick="capturePhoto()"></div>
+            <div onclick="openBrowser()" style="font-size:24px;">🗾</div>
         </div>
     </div>
 </div>
 
-<div id="page-gallery" class="page">
-    <div id="gallery-grid"></div>
-</div>
+<div id="page-gallery" class="page"><div id="gallery-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px;"></div></div>
 
 <div id="page-editor" class="page">
     <div id="edit-stage">
-        <img id="edit-preview" src="">
+        <img id="edit-preview">
         <div id="edit-stamp">
             <img id="current-stamp-img" src="https://i.imgur.com/K3VwP78.png">
+            <div class="stamp-meta" id="stamp-label">北投區 2025.12.31</div>
         </div>
     </div>
-    
-    <div class="stamp-selector">
-        <img src="https://i.imgur.com/K3VwP78.png" class="stamp-thumb active" onclick="changeStamp(this)">
-        <img src="https://i.imgur.com/hYF4u7m.png" class="stamp-thumb" onclick="changeStamp(this)">
-        <img src="https://i.imgur.com/S9SjD7m.png" class="stamp-thumb" onclick="changeStamp(this)">
-    </div>
-
     <div class="ui-panel">
+        <div style="text-align:center; padding:10px; font-size:12px; color:var(--accent);">
+            提示：可拖移郵戳位置。點擊下方按鈕更新郵戳圖。
+        </div>
         <div class="ui-content">
-            <button style="width:35%; padding:14px; background:#333; color:#fff; border:none; border-radius:10px;" onclick="showPage('gallery')">取消</button>
-            <button style="width:55%; padding:14px; background:var(--accent); color:#000; border:none; border-radius:10px; font-weight:bold;" onclick="processFinalExport()">確認分享</button>
+            <button class="btn-sub" onclick="openBrowser()">重新選戳</button>
+            <button class="btn-main" onclick="saveFinalImage()">合併儲存照片</button>
         </div>
     </div>
 </div>
-
-<input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFile(event)">
 
 <script>
     let db, currentFacing = "environment", circlePos = { x: 0.5, y: 0.5 };
     const video = document.getElementById('bg-video');
 
-    // 啟動 DB
-    const req = indexedDB.open("StampFixV7", 1);
+    // 1. 初始化 DB
+    const req = indexedDB.open("StampSceneryDB", 1);
     req.onupgradeneeded = e => e.target.result.createObjectStore("archive", { autoIncrement: true });
     req.onsuccess = e => { db = e.target.result; updateBadge(); };
 
-    async function startCamera() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: { ideal: 1920 } } });
-            video.srcObject = stream;
-            video.onloadedmetadata = () => video.play();
-        } catch (e) { console.error(e); }
+    // 2. 相機
+    async function startCam() {
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: 1280 } });
+        video.srcObject = s;
     }
-
-    // 圓框座標追蹤
-    window.addEventListener('touchmove', e => {
-        if (!document.getElementById('page-camera').classList.contains('active')) return;
-        const vRect = document.getElementById('viewport').getBoundingClientRect();
-        const touch = e.touches[0];
-        circlePos.x = touch.clientX / window.innerWidth;
-        circlePos.y = (touch.clientY - vRect.top) / vRect.height;
-        document.documentElement.style.setProperty('--cx', touch.clientX + 'px');
-        document.documentElement.style.setProperty('--cy', touch.clientY + 'px');
-    }, { passive: false });
 
     function capturePhoto() {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        const data = { img: canvas.toDataURL('image/jpeg', 0.8), cx: circlePos.x, cy: circlePos.y };
-        db.transaction("archive", "readwrite").objectStore("archive").add(data).onsuccess = () => { updateBadge(); video.play(); alert("已存入目錄"); };
+        const cvs = document.createElement('canvas');
+        cvs.width = video.videoWidth; cvs.height = video.videoHeight;
+        cvs.getContext('2d').drawImage(video, 0, 0);
+        const data = { img: cvs.toDataURL('image/jpeg', 0.8), cx: 0.5, cy: 0.5, date: new Date().toLocaleDateString(), loc: "北投區" };
+        db.transaction("archive", "readwrite").objectStore("archive").add(data).onsuccess = () => { updateBadge(); alert("拍照成功！"); };
     }
 
-    // 編輯器核心修正：確保圖片載入並顯示
+    // 3. 採集器邏輯 (小視窗控制)
+    function openBrowser() {
+        document.getElementById('browser-overlay').style.display = 'flex';
+    }
+
+    function closeBrowser() {
+        // 模擬截取功能：因為安全限制，此處會提示用戶如何輸入選定的網址
+        const promptUrl = prompt("請輸入選定郵戳圖片的連結 (或直接點選完成使用預設戳圖):");
+        if (promptUrl && promptUrl.includes("http")) {
+            document.getElementById('current-stamp-img').src = promptUrl;
+        }
+        document.getElementById('browser-overlay').style.display = 'none';
+        if(document.getElementById('page-editor').classList.contains('active')) {
+            // 如果在編輯頁面，直接更新
+        } else {
+            alert("已選定戳圖！請到目錄選擇照片進行編輯。");
+        }
+    }
+
+    // 4. 編輯與合併
     function openEditor(data) {
         const img = document.getElementById('edit-preview');
-        const stamp = document.getElementById('edit-stamp');
-        
-        // 1. 先重設圖片 src，並顯示編輯頁面
-        img.src = data.img; 
+        img.src = data.img;
+        document.getElementById('stamp-label').innerText = `${data.loc} ${data.date}`;
         showPage('editor');
-        
-        // 2. 監聽圖片載入完成事件，再進行座標計算
-        img.onload = () => {
-            const stage = document.getElementById('edit-stage').getBoundingClientRect();
-            const imgRatio = img.naturalWidth / img.naturalHeight;
-            const stageRatio = stage.width / stage.height;
-            let rw, rh;
-
-            if (imgRatio > stageRatio) {
-                rw = stage.width; rh = stage.width / imgRatio;
-            } else {
-                rh = stage.height; rw = stage.height * imgRatio;
-            }
-
-            const offsetX = (stage.width - rw) / 2;
-            const offsetY = (stage.height - rh) / 2;
-            
-            stamp.style.left = (offsetX + rw * data.cx) + 'px';
-            stamp.style.top = (offsetY + rh * data.cy) + 'px';
-            img.style.opacity = "1"; // 強制顯示圖片
-        };
-        
-        // 萬一圖片載入失敗的防呆
-        img.onerror = () => {
-            alert("圖片載入失敗，請嘗試重新拍攝。");
-            showPage('gallery');
-        };
     }
 
-    // 郵戳拖移
-    document.getElementById('edit-stamp').addEventListener('touchmove', e => {
+    async function saveFinalImage() {
+        const previewImg = document.getElementById('edit-preview');
+        const stampImg = document.getElementById('current-stamp-img');
+        const cvs = document.createElement('canvas');
+        cvs.width = previewImg.naturalWidth; cvs.height = previewImg.naturalHeight;
+        const ctx = cvs.getContext('2d');
+        
+        // 畫照片
+        ctx.drawImage(previewImg, 0, 0);
+        
+        // 計算郵戳位置
         const stage = document.getElementById('edit-stage').getBoundingClientRect();
-        e.currentTarget.style.left = (e.touches[0].clientX - stage.left) + 'px';
-        e.currentTarget.style.top = (e.touches[0].clientY - stage.top) + 'px';
-    });
+        const stampEl = document.getElementById('edit-stamp').getBoundingClientRect();
+        const rx = (stampEl.left - stage.left + stampEl.width/2) / stage.width;
+        const ry = (stampEl.top - stage.top + stampEl.height/2) / stage.height;
+        
+        const finalStampSize = cvs.width * 0.25;
+        ctx.save();
+        ctx.translate(cvs.width * rx, cvs.height * ry);
+        
+        // 畫郵戳 (模擬透明背景處理：使用 multiply 混合模式可以去掉白底)
+        ctx.globalCompositeOperation = 'multiply'; 
+        ctx.drawImage(stampImg, -finalStampSize/2, -finalStampSize/2, finalStampSize, finalStampSize);
+        ctx.restore();
+        
+        // 畫文字標註
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = "#ff3b30";
+        ctx.font = `bold ${cvs.width * 0.03}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(document.getElementById('stamp-label').innerText, cvs.width * rx, cvs.height * ry + finalStampSize/2 + 20);
 
-    function changeStamp(el) {
-        document.getElementById('current-stamp-img').src = el.src;
-        document.querySelectorAll('.stamp-thumb').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
+        const link = document.createElement('a');
+        link.download = `STAMP_${Date.now()}.jpg`;
+        link.href = cvs.toDataURL('image/jpeg', 0.9);
+        link.click();
     }
 
+    // 5. 基礎功能
     function showPage(p) {
-        document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
         document.getElementById('page-' + p).classList.add('active');
-        if (p === 'camera') { document.getElementById('tab-cam').classList.add('active'); video.play(); }
-        if (p === 'gallery') { document.getElementById('tab-gal').classList.add('active'); renderGallery(); }
+        if (p === 'camera') startCam();
+        if (p === 'gallery') renderGallery();
     }
 
     function renderGallery() {
@@ -213,26 +202,26 @@
         db.transaction("archive", "readonly").objectStore("archive").openCursor().onsuccess = e => {
             const cursor = e.target.result;
             if (cursor) {
-                const div = document.createElement('div'); div.className = 'gallery-item';
-                div.innerHTML = `<img src="${cursor.value.img}">`;
-                const d = cursor.value;
-                div.onclick = () => openEditor(d);
+                const div = document.createElement('div');
+                div.innerHTML = `<img src="${cursor.value.img}" style="width:100%; aspect-ratio:1; object-fit:cover;">`;
+                div.onclick = () => openEditor(cursor.value);
                 grid.appendChild(div);
                 cursor.continue();
             }
         };
     }
 
-    function toggleCamera() { currentFacing = currentFacing === "environment" ? "user" : "environment"; startCamera(); }
-    function updateBadge() { db.transaction("archive", "readonly").objectStore("archive").count().onsuccess = e => { document.getElementById('count').innerText = `(${e.target.result})`; }; }
-    function processFinalExport() { alert("正在合成並儲存..."); }
-    function handleFile(e) {
-        const r = new FileReader();
-        r.onload = ev => openEditor({ img: ev.target.result, cx: 0.5, cy: 0.5 });
-        r.readAsDataURL(e.target.files[0]);
-    }
+    const editStamp = document.getElementById('edit-stamp');
+    editStamp.addEventListener('touchmove', e => {
+        const stage = document.getElementById('edit-stage').getBoundingClientRect();
+        editStamp.style.left = (e.touches[0].clientX - stage.left) + 'px';
+        editStamp.style.top = (e.touches[0].clientY - stage.top) + 'px';
+    });
 
-    window.onload = startCamera;
+    function toggleCamera() { currentFacing = currentFacing === "environment" ? "user" : "environment"; startCam(); }
+    function updateBadge() { db.transaction("archive", "readonly").objectStore("archive").count().onsuccess = e => { document.getElementById('count').innerText = `(${e.target.result})`; }; }
+
+    window.onload = startCam;
 </script>
 </body>
 </html>
