@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Album Support</title>
+    <title>Stamp Pro - Save Fix</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
@@ -11,7 +11,7 @@
 
         .app-container { display: flex; flex-direction: column; height: 100%; }
         .top-nav { display: flex; background: #1a1a1a; padding: 10px; gap: 10px; border-bottom: 1px solid #333; z-index: 1000; touch-action: auto; }
-        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #333; color: #888; font-weight: bold; font-size: 14px; }
+        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #333; color: #888; font-weight: bold; }
         .nav-btn.active { background: #444; color: var(--accent); }
 
         .main-content { flex: 1; position: relative; overflow: hidden; background: #000; }
@@ -34,18 +34,27 @@
         #stamp-img { width: 100%; height: auto; mix-blend-mode: multiply; pointer-events: none; }
         .stamp-tag { 
             color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(255,255,255,0.8); 
-            padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30; pointer-events: none;
+            padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30;
         }
 
         .gps-info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--accent); z-index: 600; }
 
+        /* 底部按鈕區 */
         .bottom-panel { background: #000; border-top: 1px solid #333; padding: 15px; min-height: 130px; display: flex; align-items: center; justify-content: center; touch-action: auto; }
-        .shutter-box { display: flex; align-items: center; gap: 30px; }
+        .shutter-box { display: flex; align-items: center; gap: 40px; }
         .shutter { width: 75px; height: 75px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
-        .album-btn { width: 50px; height: 50px; background: #333; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #555; }
+        .album-btn { width: 50px; height: 50px; background: #222; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #444; }
         
         .btn-group { display: none; width: 100%; flex-direction: column; gap: 8px; }
         .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; color: white; }
+
+        /* 預覽視窗 */
+        #result-overlay { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; 
+            display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; 
+            touch-action: auto;
+        }
+        #result-img { max-width: 100%; max-height: 70%; border: 2px solid white; margin-bottom: 20px; }
 
         #list-view { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; overflow-y: auto; touch-action: pan-y; }
         .thumb { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; }
@@ -68,9 +77,7 @@
                 <div id="guide-ring"></div>
             </div>
         </div>
-
         <div id="page-list" class="page"><div id="list-view"></div></div>
-
         <div id="page-editor" class="page">
             <div id="edit-stage">
                 <img id="photo-preview">
@@ -86,14 +93,22 @@
         <div id="ctrl-cam" class="shutter-box">
             <div class="album-btn" onclick="document.getElementById('album-input').click()">🖼️</div>
             <button class="shutter" onclick="snap()"></button>
-            <div style="width:50px"></div> <input type="file" id="album-input" hidden accept="image/*" onchange="importPhoto(event)">
+            <div style="width:50px"></div>
+            <input type="file" id="album-input" hidden accept="image/*" onchange="importPhoto(event)">
         </div>
         <div id="ctrl-edit" class="btn-group">
             <button class="btn" style="background:#007bff;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">1. 複製郵戳圖</button>
             <button class="btn" style="background:#333;" onclick="processClipboard()">2. 帶回郵戳</button>
-            <button class="btn" style="background:#ff3b30;" onclick="saveFinal()">3. 合併存檔</button>
+            <button class="btn" style="background:#ff3b30;" onclick="saveFinal()">3. 生成照片</button>
         </div>
     </div>
+</div>
+
+<div id="result-overlay">
+    <h3>✅ 合成完成</h3>
+    <p>請「長按圖片」選擇儲存照片</p>
+    <img id="result-img">
+    <button class="btn" style="background:#444; width:200px;" onclick="closeResult()">返回目錄</button>
 </div>
 
 <script>
@@ -110,7 +125,7 @@
             video.srcObject = stream;
             video.onloadedmetadata = () => video.play();
             updateLoc();
-        } catch(e) { console.log("Camera fail"); }
+        } catch(e) {}
     }
 
     function updateLoc() {
@@ -125,28 +140,19 @@
     }
 
     function nav(p) {
-        // 隱藏所有頁面
         document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-        
-        // 顯示目標頁面
         document.getElementById('page-' + p).classList.add('active');
-        
-        // 切換按鈕狀態
         if (p === 'camera') {
             document.getElementById('btn-camera').classList.add('active');
             document.getElementById('ctrl-cam').style.display = 'flex';
             document.getElementById('ctrl-edit').style.display = 'none';
             initCam();
-        } else if (p === 'list') {
+        } else {
             document.getElementById('btn-list').classList.add('active');
             document.getElementById('ctrl-cam').style.display = 'none';
-            document.getElementById('ctrl-edit').style.display = 'none';
-            renderList();
-        } else if (p === 'editor') {
-            document.getElementById('btn-list').classList.add('active'); // 編輯時高亮目錄
-            document.getElementById('ctrl-cam').style.display = 'none';
-            document.getElementById('ctrl-edit').style.display = 'flex';
+            document.getElementById('ctrl-edit').style.display = (p==='editor'?'flex':'none');
+            if(p==='list') renderList();
         }
     }
 
@@ -168,21 +174,13 @@
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (f) => {
-            addPhoto(f.target.result);
-            alert("相片匯入成功，請至目錄處理");
-            nav('list');
-        };
+        reader.onload = (f) => { addPhoto(f.target.result); nav('list'); };
         reader.readAsDataURL(file);
     }
 
     function addPhoto(src) {
         const d = new Date();
-        photos.push({ 
-            src: src, 
-            loc: lastLoc, 
-            date: `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` 
-        });
+        photos.push({ src: src, loc: lastLoc, date: `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` });
         document.getElementById('count').innerText = photos.length;
     }
 
@@ -201,17 +199,15 @@
         nav('editor');
     }
 
-    // --- 手勢處理 ---
-    let initialDist = 0, initialAngle = 0, initialScale = 1, initialRot = 0;
+    // 手勢處理
     wrapper.addEventListener('pointerdown', e => {
         e.preventDefault();
         touches[e.pointerId] = e;
         const keys = Object.keys(touches);
         if (keys.length === 2) {
-            initialDist = Math.hypot(touches[keys[0]].clientX - touches[keys[1]].clientX, touches[keys[0]].clientY - touches[keys[1]].clientY);
-            initialAngle = Math.atan2(touches[keys[1]].clientY - touches[keys[0]].clientY, touches[keys[1]].clientX - touches[keys[0]].clientX) * 180 / Math.PI;
-            initialScale = state.s;
-            initialRot = state.r;
+            this.dist = Math.hypot(touches[keys[0]].clientX - touches[keys[1]].clientX, touches[keys[0]].clientY - touches[keys[1]].clientY);
+            this.angle = Math.atan2(touches[keys[1]].clientY - touches[keys[0]].clientY, touches[keys[1]].clientX - touches[keys[0]].clientX) * 180 / Math.PI;
+            this.s = state.s; this.r = state.r;
         }
     });
 
@@ -220,24 +216,18 @@
         touches[e.pointerId] = e;
         const keys = Object.keys(touches);
         if (keys.length === 1) {
-            state.x += e.movementX;
-            state.y += e.movementY;
+            state.x += e.movementX; state.y += e.movementY;
         } else if (keys.length === 2) {
-            const p1 = touches[keys[0]], p2 = touches[keys[1]];
-            const d = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
-            const a = Math.atan2(p2.clientY - p1.clientY, p2.clientX - p1.clientX) * 180 / Math.PI;
-            state.s = Math.max(0.1, initialScale * (d / initialDist));
-            state.r = initialRot + (a - initialAngle);
+            const d = Math.hypot(touches[keys[0]].clientX - touches[keys[1]].clientX, touches[keys[0]].clientY - touches[keys[1]].clientY);
+            const a = Math.atan2(touches[keys[1]].clientY - touches[keys[0]].clientY, touches[keys[1]].clientX - touches[keys[0]].clientX) * 180 / Math.PI;
+            state.s = Math.max(0.1, this.s * (d / this.dist));
+            state.r = this.r + (a - this.angle);
         }
         requestAnimationFrame(updateUI);
     });
 
     window.addEventListener('pointerup', e => delete touches[e.pointerId]);
-    window.addEventListener('pointercancel', e => delete touches[e.pointerId]);
-
-    function updateUI() {
-        wrapper.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.s}) rotate(${state.r}deg)`;
-    }
+    function updateUI() { wrapper.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.s}) rotate(${state.r}deg)`; }
 
     async function processClipboard() {
         try {
@@ -259,7 +249,7 @@
                     img.src = URL.createObjectURL(blob);
                 }
             }
-        } catch(e) { alert("請先複製郵戳圖片"); }
+        } catch(e) { alert("請先複製圖片"); }
     }
 
     function saveFinal() {
@@ -288,11 +278,13 @@
         ctx.fillText(document.getElementById('stamp-label').innerText, 0, finalScale/2 + (finalScale * 0.2));
         ctx.restore();
 
-        const a = document.createElement('a');
-        a.download = `Stamp_${Date.now()}.jpg`;
-        a.href = canvas.toDataURL('image/jpeg', 0.95);
-        a.click();
-        
+        // 顯示結果層供使用者長按儲存
+        document.getElementById('result-img').src = canvas.toDataURL('image/jpeg', 0.9);
+        document.getElementById('result-overlay').style.display = 'flex';
+    }
+
+    function closeResult() {
+        document.getElementById('result-overlay').style.display = 'none';
         photos.splice(activeIdx, 1);
         document.getElementById('count').innerText = photos.length;
         nav('list');
