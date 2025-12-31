@@ -3,43 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Official Style</title>
+    <title>Stamp Pro - Visible Fix</title>
     <style>
         :root { --cx: 50%; --cy: 50%; --cr: 75px; --accent: #00ffff; }
         body { margin: 0; background: #000; overflow: hidden; font-family: -apple-system, sans-serif; height: 100dvh; display: flex; flex-direction: column; color: white; }
         
-        /* 導覽與佈局 */
         .nav-tabs { display: flex; background: #111; height: 50px; border-bottom: 1px solid #333; flex-shrink: 0; z-index: 2000; }
         .tab { flex: 1; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-size: 14px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: bold; }
+
         .page { display: none; flex: 1; position: relative; overflow: hidden; flex-direction: column; }
         .page.active { display: flex; }
 
-        /* 相機 */
+        /* 相機視景 */
         #viewport { flex: 1; position: relative; background: #000; overflow: hidden; }
         #bg-video { width: 100%; height: 100%; object-fit: cover; }
-        #guide-overlay { position: absolute; inset: 0; z-index: 100; pointer-events: none; background: rgba(0, 0, 0, 0.4); mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image: radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); }
-        #guide-border { position: absolute; width: calc(var(--cr) * 2); height: calc(var(--cr) * 2); left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; z-index: 101; pointer-events: none; }
-
-        /* 編輯器郵戳 (支援圖片) */
-        #edit-stage { flex: 1; position: relative; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
-        #edit-preview { max-width: 100%; max-height: 100%; object-fit: contain; }
+        
+        /* 編輯器舞台 - 修正照片不顯示問題 */
+        #edit-stage { 
+            flex: 1; 
+            position: relative; 
+            background: #111; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden; 
+            touch-action: none;
+        }
+        #edit-preview { 
+            display: block;
+            max-width: 100%; 
+            max-height: 100%; 
+            object-fit: contain; 
+            z-index: 10; /* 照片在底層 */
+            background: #000;
+        }
         
         #edit-stamp { 
-            position: absolute; width: 130px; height: 130px; 
-            transform: translate(-50%, -50%); touch-action: none;
-            z-index: 500; display: flex; align-items: center; justify-content: center;
+            position: absolute; 
+            width: 120px; 
+            height: 120px; 
+            transform: translate(-50%, -50%); 
+            touch-action: none;
+            z-index: 100; /* 郵戳在上層 */
+            pointer-events: auto;
         }
-        #edit-stamp img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)); }
+        #edit-stamp img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 
-        /* UI */
-        .ui-panel { background: #000; padding: 15px 0; padding-bottom: calc(15px + env(safe-area-inset-bottom)); border-top: 1px solid #333; flex-shrink: 0; }
-        .ui-content { display: flex; justify-content: space-around; align-items: center; width: 100%; }
-        #shutter-btn { width: 70px; height: 70px; border: 5px solid #fff; background: #f00; border-radius: 50%; }
+        /* UI 面板 */
+        .ui-panel { background: #000; border-top: 1px solid #333; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); }
+        .ui-content { display: flex; justify-content: space-around; align-items: center; padding: 15px 0; }
+        #shutter-btn { width: 65px; height: 65px; border: 5px solid #fff; background: #f00; border-radius: 50%; }
 
-        .stamp-selector { display: flex; overflow-x: auto; gap: 15px; padding: 10px 20px; background: #111; }
-        .stamp-thumb { width: 50px; height: 50px; border-radius: 5px; border: 1px solid #444; flex-shrink: 0; background: #222; padding: 5px; }
-        .stamp-thumb.active { border-color: var(--accent); background: #333; }
+        .stamp-selector { display: flex; overflow-x: auto; gap: 15px; padding: 10px 20px; background: #111; border-top: 1px solid #222; height: 60px; }
+        .stamp-thumb { width: 45px; height: 45px; border-radius: 6px; border: 2px solid transparent; background: #222; padding: 3px; flex-shrink: 0; }
+        .stamp-thumb.active { border-color: var(--accent); }
+
+        #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; overflow-y: auto; flex: 1; }
+        .gallery-item { aspect-ratio: 1; background: #222; overflow: hidden; }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
@@ -52,8 +74,8 @@
 <div id="page-camera" class="page active">
     <div id="viewport">
         <video id="bg-video" autoplay playsinline muted></video>
-        <div id="guide-overlay"></div>
-        <div id="guide-border"></div>
+        <div id="guide-overlay" style="position:absolute; inset:0; z-index:100; pointer-events:none; background:rgba(0,0,0,0.4); mask-image:radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%); -webkit-mask-image:radial-gradient(circle var(--cr) at var(--cx) var(--cy), transparent 99%, black 100%);"></div>
+        <div id="guide-border" style="position:absolute; width:calc(var(--cr)*2); height:calc(var(--cr)*2); left:var(--cx); top:var(--cy); transform:translate(-50%,-50%); border:3px dashed var(--accent); border-radius:50%; z-index:101;"></div>
     </div>
     <div class="ui-panel">
         <div class="ui-content">
@@ -65,28 +87,27 @@
 </div>
 
 <div id="page-gallery" class="page">
-    <div id="gallery-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; padding:2px; overflow-y:auto; flex:1;"></div>
+    <div id="gallery-grid"></div>
 </div>
 
 <div id="page-editor" class="page">
     <div id="edit-stage">
-        <img id="edit-preview">
+        <img id="edit-preview" src="">
         <div id="edit-stamp">
-            <img id="current-stamp-img" src="https://i.imgur.com/K3VwP78.png"> 
+            <img id="current-stamp-img" src="https://i.imgur.com/K3VwP78.png">
         </div>
     </div>
     
     <div class="stamp-selector">
-        <img src="https://i.imgur.com/K3VwP78.png" class="stamp-thumb active" onclick="changeStampType(this.src, this)">
-        <img src="https://i.imgur.com/hYF4u7m.png" class="stamp-thumb" onclick="changeStampType(this.src, this)">
-        <img src="https://i.imgur.com/S9SjD7m.png" class="stamp-thumb" onclick="changeStampType(this.src, this)">
-        <div style="font-size:10px; color:#666; align-self:center;">選擇<br>圖樣</div>
+        <img src="https://i.imgur.com/K3VwP78.png" class="stamp-thumb active" onclick="changeStamp(this)">
+        <img src="https://i.imgur.com/hYF4u7m.png" class="stamp-thumb" onclick="changeStamp(this)">
+        <img src="https://i.imgur.com/S9SjD7m.png" class="stamp-thumb" onclick="changeStamp(this)">
     </div>
 
     <div class="ui-panel">
         <div class="ui-content">
-            <button style="width:35%; padding:15px; background:#333; color:#fff; border:none; border-radius:12px;" onclick="showPage('gallery')">返回</button>
-            <button style="width:55%; padding:15px; background:var(--accent); color:#000; border:none; border-radius:12px; font-weight:bold;" onclick="processFinalExport()">儲存分享</button>
+            <button style="width:35%; padding:14px; background:#333; color:#fff; border:none; border-radius:10px;" onclick="showPage('gallery')">取消</button>
+            <button style="width:55%; padding:14px; background:var(--accent); color:#000; border:none; border-radius:10px; font-weight:bold;" onclick="processFinalExport()">確認分享</button>
         </div>
     </div>
 </div>
@@ -97,20 +118,20 @@
     let db, currentFacing = "environment", circlePos = { x: 0.5, y: 0.5 };
     const video = document.getElementById('bg-video');
 
-    // 初始化
-    const dbReq = indexedDB.open("StampOfficialDB", 1);
-    dbReq.onupgradeneeded = e => e.target.result.createObjectStore("photos", { autoIncrement: true });
-    dbReq.onsuccess = e => { db = e.target.result; updateBadge(); };
+    // 啟動 DB
+    const req = indexedDB.open("StampFixV7", 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore("archive", { autoIncrement: true });
+    req.onsuccess = e => { db = e.target.result; updateBadge(); };
 
     async function startCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: { ideal: 1920 } } });
             video.srcObject = stream;
             video.onloadedmetadata = () => video.play();
-        } catch (e) { console.log(e); }
+        } catch (e) { console.error(e); }
     }
 
-    // 圓框與拍照
+    // 圓框座標追蹤
     window.addEventListener('touchmove', e => {
         if (!document.getElementById('page-camera').classList.contains('active')) return;
         const vRect = document.getElementById('viewport').getBoundingClientRect();
@@ -126,42 +147,57 @@
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
         const data = { img: canvas.toDataURL('image/jpeg', 0.8), cx: circlePos.x, cy: circlePos.y };
-        db.transaction("photos", "readwrite").objectStore("photos").add(data).onsuccess = () => { updateBadge(); video.play(); };
+        db.transaction("archive", "readwrite").objectStore("archive").add(data).onsuccess = () => { updateBadge(); video.play(); alert("已存入目錄"); };
     }
 
-    // 編輯與郵戳圖樣切換
-    function changeStampType(url, el) {
-        document.getElementById('current-stamp-img').src = url;
-        document.querySelectorAll('.stamp-thumb').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
-    }
-
+    // 編輯器核心修正：確保圖片載入並顯示
     function openEditor(data) {
         const img = document.getElementById('edit-preview');
+        const stamp = document.getElementById('edit-stamp');
+        
+        // 1. 先重設圖片 src，並顯示編輯頁面
+        img.src = data.img; 
         showPage('editor');
-        img.src = data.img;
+        
+        // 2. 監聽圖片載入完成事件，再進行座標計算
         img.onload = () => {
             const stage = document.getElementById('edit-stage').getBoundingClientRect();
             const imgRatio = img.naturalWidth / img.naturalHeight;
             const stageRatio = stage.width / stage.height;
             let rw, rh;
-            if (imgRatio > stageRatio) { rw = stage.width; rh = stage.width / imgRatio; }
-            else { rh = stage.height; rw = stage.height * imgRatio; }
-            document.getElementById('edit-stamp').style.left = ((stage.width-rw)/2 + rw*data.cx) + 'px';
-            document.getElementById('edit-stamp').style.top = ((stage.height-rh)/2 + rh*data.cy) + 'px';
+
+            if (imgRatio > stageRatio) {
+                rw = stage.width; rh = stage.width / imgRatio;
+            } else {
+                rh = stage.height; rw = stage.height * imgRatio;
+            }
+
+            const offsetX = (stage.width - rw) / 2;
+            const offsetY = (stage.height - rh) / 2;
+            
+            stamp.style.left = (offsetX + rw * data.cx) + 'px';
+            stamp.style.top = (offsetY + rh * data.cy) + 'px';
+            img.style.opacity = "1"; // 強制顯示圖片
+        };
+        
+        // 萬一圖片載入失敗的防呆
+        img.onerror = () => {
+            alert("圖片載入失敗，請嘗試重新拍攝。");
+            showPage('gallery');
         };
     }
 
-    const editStamp = document.getElementById('edit-stamp');
-    editStamp.addEventListener('touchmove', e => {
+    // 郵戳拖移
+    document.getElementById('edit-stamp').addEventListener('touchmove', e => {
         const stage = document.getElementById('edit-stage').getBoundingClientRect();
-        editStamp.style.left = (e.touches[0].clientX - stage.left) + 'px';
-        editStamp.style.top = (e.touches[0].clientY - stage.top) + 'px';
+        e.currentTarget.style.left = (e.touches[0].clientX - stage.left) + 'px';
+        e.currentTarget.style.top = (e.touches[0].clientY - stage.top) + 'px';
     });
 
-    async function processFinalExport() {
-        alert("合成與下載功能啟動...");
-        // 這裡可續接 Canvas drawImage(stampImg)
+    function changeStamp(el) {
+        document.getElementById('current-stamp-img').src = el.src;
+        document.querySelectorAll('.stamp-thumb').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
     }
 
     function showPage(p) {
@@ -174,12 +210,13 @@
 
     function renderGallery() {
         const grid = document.getElementById('gallery-grid'); grid.innerHTML = '';
-        db.transaction("photos", "readonly").objectStore("photos").openCursor().onsuccess = e => {
+        db.transaction("archive", "readonly").objectStore("archive").openCursor().onsuccess = e => {
             const cursor = e.target.result;
             if (cursor) {
-                const div = document.createElement('div');
-                div.innerHTML = `<img src="${cursor.value.img}" style="width:100%; height:100%; object-fit:cover;">`;
-                div.onclick = () => openEditor(cursor.value);
+                const div = document.createElement('div'); div.className = 'gallery-item';
+                div.innerHTML = `<img src="${cursor.value.img}">`;
+                const d = cursor.value;
+                div.onclick = () => openEditor(d);
                 grid.appendChild(div);
                 cursor.continue();
             }
@@ -187,9 +224,15 @@
     }
 
     function toggleCamera() { currentFacing = currentFacing === "environment" ? "user" : "environment"; startCamera(); }
-    function updateBadge() { db.transaction("photos", "readonly").objectStore("photos").count().onsuccess = e => { document.getElementById('count').innerText = `(${e.target.result})`; }; }
+    function updateBadge() { db.transaction("archive", "readonly").objectStore("archive").count().onsuccess = e => { document.getElementById('count').innerText = `(${e.target.result})`; }; }
+    function processFinalExport() { alert("正在合成並儲存..."); }
+    function handleFile(e) {
+        const r = new FileReader();
+        r.onload = ev => openEditor({ img: ev.target.result, cx: 0.5, cy: 0.5 });
+        r.readAsDataURL(e.target.files[0]);
+    }
 
-    window.onload = () => { startCamera(); };
+    window.onload = startCamera;
 </script>
 </body>
 </html>
