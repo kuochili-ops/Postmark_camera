@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Advanced Color</title>
+    <title>Stamp Pro - Opacity Control</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
@@ -27,14 +27,20 @@
 
         #edit-stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #111; overflow: hidden; }
         #photo-preview { max-width: 100%; max-height: 100%; object-fit: contain; }
-        #stamp-wrapper { position: absolute; width: 150px; display: none; flex-direction: column; align-items: center; z-index: 900; will-change: transform; }
+        #stamp-wrapper { position: absolute; width: 150px; display: none; flex-direction: column; align-items: center; z-index: 900; will-change: transform; opacity: 1; }
         #stamp-img { width: 100%; height: auto; mix-blend-mode: multiply; pointer-events: none; }
         .stamp-tag { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(255,255,255,0.8); padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30; text-align: center; }
+
+        /* 透明度滑桿樣式 */
+        .slider-box { padding: 10px 5px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 5px; }
+        .slider-box label { font-size: 12px; display: block; margin-bottom: 5px; color: #aaa; }
+        input[type=range] { width: 100%; height: 8px; border-radius: 5px; background: #444; outline: none; -webkit-appearance: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; }
 
         .bottom-panel { 
             position: absolute; bottom: 0; left: 0; right: 0;
             background: linear-gradient(transparent, rgba(0,0,0,0.9)); 
-            padding: 20px 15px calc(20px + env(safe-area-inset-bottom)); 
+            padding: 15px 15px calc(20px + env(safe-area-inset-bottom)); 
             display: flex; align-items: center; justify-content: center; z-index: 1100;
         }
         .ctrl-group { display: none; align-items: center; justify-content: space-around; width: 100%; max-width: 400px; }
@@ -45,11 +51,7 @@
         .btn { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; font-size: 13px; color: white; }
 
         #result-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        #result-img { max-width: 100%; max-height: 70%; border: 1px solid #444; border-radius: 4px; }
-
-        #list-view { padding: 80px 10px 150px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; overflow-y: auto; }
-        .thumb { background: #222; border-radius: 10px; overflow: hidden; border: 1px solid #333; aspect-ratio: 3/4; }
-        .thumb img { width: 100%; height: 100%; object-fit: cover; }
+        #result-img { max-width: 100%; max-height: 70%; border: 1px solid #444; border-radius: 4px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -73,7 +75,7 @@
                 <img id="photo-preview">
                 <div id="stamp-wrapper">
                     <img id="stamp-img">
-                    <div class="stamp-tag" id="stamp-label" contenteditable="true">地點日期</div>
+                    <div class="stamp-tag" id="stamp-label" contenteditable="true">編輯日期地點</div>
                 </div>
             </div>
         </div>
@@ -87,16 +89,20 @@
             <input type="file" id="album-input" hidden accept="image/*" onchange="importPhoto(event)">
         </div>
         <div id="ctrl-edit" class="edit-btns">
+            <div class="slider-box">
+                <label>郵戳透明度: <span id="op-val">100</span>%</label>
+                <input type="range" id="opacity-slider" min="10" max="100" value="100" oninput="changeOpacity(this.value)">
+            </div>
             <div style="display:flex; gap:6px;">
-                <button class="btn" style="background:#007b43;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">🇹🇼 台灣網頁</button>
-                <button class="btn" style="background:#ff3b30;" onclick="window.open('https://www.post.japanpost.jp/kitte_hagaki/stamp/fuke/', '_blank')">🇯🇵 日本網頁</button>
+                <button class="btn" style="background:#007b43;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">🇹🇼 台灣</button>
+                <button class="btn" style="background:#ff3b30;" onclick="window.open('https://www.post.japanpost.jp/kitte_hagaki/stamp/fuke/', '_blank')">🇯🇵 日本</button>
             </div>
             <div style="display:flex; gap:6px;">
                 <button class="btn" style="background:#8e44ad;" onclick="processClipboard('both')">去背+轉紅</button>
                 <button class="btn" style="background:#2980b9;" onclick="processClipboard('bgOnly')">僅去背(留色)</button>
                 <button class="btn" style="background:#444;" onclick="processClipboard('none')">保留原圖</button>
             </div>
-            <button class="btn" style="background:var(--accent); color:#000; font-size:15px;" onclick="saveFinal()">✅ 生成合成照片</button>
+            <button class="btn" style="background:var(--accent); color:#000; font-size:15px;" onclick="saveFinal()">✅ 完成合成照片</button>
         </div>
     </div>
 </div>
@@ -108,10 +114,16 @@
 
 <script>
     let stream, photos = [], activeIdx = -1, facingMode = "environment";
-    let state = { x: 0, y: 0, s: 1 };
+    let state = { x: 0, y: 0, s: 1, alpha: 1 };
     let touches = {};
     const video = document.getElementById('v');
     const wrapper = document.getElementById('stamp-wrapper');
+
+    function changeOpacity(val) {
+        state.alpha = val / 100;
+        wrapper.style.opacity = state.alpha;
+        document.getElementById('op-val').innerText = val;
+    }
 
     async function downsizeImage(dataUrl, maxSide = 1600) {
         return new Promise(resolve => {
@@ -198,8 +210,11 @@
         activeIdx = i;
         document.getElementById('photo-preview').src = photos[i].src;
         document.getElementById('stamp-label').innerText = `地點 ${photos[i].date}`;
-        state = { x: 0, y: 0, s: 1 };
+        state.x = 0; state.y = 0; state.s = 1; state.alpha = 1;
+        document.getElementById('opacity-slider').value = 100;
+        document.getElementById('op-val').innerText = 100;
         wrapper.style.display = 'flex';
+        wrapper.style.opacity = 1;
         updateUI();
         nav('editor');
     }
@@ -239,18 +254,11 @@
                         c.width = img.width; c.height = img.height;
                         const ctx = c.getContext('2d');
                         ctx.drawImage(img, 0, 0);
-                        
                         if (mode !== 'none') {
                             const id = ctx.getImageData(0,0,c.width,c.height);
                             for(let i=0; i<id.data.length; i+=4) {
-                                // 白色去背 (亮度門檻)
-                                if(id.data[i]>200 && id.data[i+1]>200 && id.data[i+2]>200) {
-                                    id.data[i+3]=0;
-                                } else if (mode === 'both') {
-                                    // 轉為紅色 (中華郵政風)
-                                    id.data[i] = 255; id.data[i+1] = 59; id.data[i+2] = 48;
-                                }
-                                // 若 mode 為 'bgOnly'，則只執行去背，不執行變色邏輯
+                                if(id.data[i]>200 && id.data[i+1]>200 && id.data[i+2]>200) id.data[i+3]=0;
+                                else if (mode === 'both') { id.data[i] = 255; id.data[i+1] = 59; id.data[i+2] = 48; }
                             }
                             ctx.putImageData(id,0,0);
                         }
@@ -277,6 +285,7 @@
         const finalScale = (wRect.width / pRect.width) * canvas.width;
         
         ctx.save();
+        ctx.globalAlpha = state.alpha; // 套用透明度到最終合成
         ctx.translate(canvas.width * centerX, canvas.height * centerY);
         ctx.drawImage(stamp, -finalScale/2, -finalScale/2, finalScale, finalScale);
         ctx.fillStyle = "#ff3b30";
@@ -295,7 +304,6 @@
         document.getElementById('count').innerText = photos.length;
         nav('list');
     }
-
     window.onload = initCam;
 </script>
 </body>
