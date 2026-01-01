@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Toggle Removal</title>
+    <title>Stamp Pro - Advanced Color</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
@@ -41,8 +41,8 @@
         .shutter { width: 75px; height: 75px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
         .icon-btn { width: 50px; height: 50px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid rgba(255,255,255,0.2); }
         
-        .edit-btns { display: none; width: 100%; flex-direction: column; gap: 8px; }
-        .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; font-size: 14px; color: white; }
+        .edit-btns { display: none; width: 100%; flex-direction: column; gap: 6px; }
+        .btn { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; font-size: 13px; color: white; }
 
         #result-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #result-img { max-width: 100%; max-height: 70%; border: 1px solid #444; border-radius: 4px; }
@@ -73,7 +73,7 @@
                 <img id="photo-preview">
                 <div id="stamp-wrapper">
                     <img id="stamp-img">
-                    <div class="stamp-tag" id="stamp-label" contenteditable="true">編輯日期地點</div>
+                    <div class="stamp-tag" id="stamp-label" contenteditable="true">地點日期</div>
                 </div>
             </div>
         </div>
@@ -87,15 +87,16 @@
             <input type="file" id="album-input" hidden accept="image/*" onchange="importPhoto(event)">
         </div>
         <div id="ctrl-edit" class="edit-btns">
-            <div style="display:flex; gap:8px;">
-                <button class="btn" style="background:#007b43;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">🇹🇼 台灣</button>
-                <button class="btn" style="background:#ff3b30;" onclick="window.open('https://www.post.japanpost.jp/kitte_hagaki/stamp/fuke/', '_blank')">🇯🇵 日本</button>
+            <div style="display:flex; gap:6px;">
+                <button class="btn" style="background:#007b43;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">🇹🇼 台灣網頁</button>
+                <button class="btn" style="background:#ff3b30;" onclick="window.open('https://www.post.japanpost.jp/kitte_hagaki/stamp/fuke/', '_blank')">🇯🇵 日本網頁</button>
             </div>
-            <div style="display:flex; gap:8px;">
-                <button class="btn" style="background:#444;" onclick="processClipboard(true)">📥 去背+轉紅</button>
-                <button class="btn" style="background:#666;" onclick="processClipboard(false)">📥 保留原圖</button>
+            <div style="display:flex; gap:6px;">
+                <button class="btn" style="background:#8e44ad;" onclick="processClipboard('both')">去背+轉紅</button>
+                <button class="btn" style="background:#2980b9;" onclick="processClipboard('bgOnly')">僅去背(留色)</button>
+                <button class="btn" style="background:#444;" onclick="processClipboard('none')">保留原圖</button>
             </div>
-            <button class="btn" style="background:var(--accent); color:#000;" onclick="saveFinal()">✅ 完成合成</button>
+            <button class="btn" style="background:var(--accent); color:#000; font-size:15px;" onclick="saveFinal()">✅ 生成合成照片</button>
         </div>
     </div>
 </div>
@@ -134,8 +135,7 @@
         if (stream) stream.getTracks().forEach(t => t.stop());
         try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode, width: { ideal: 1920 } } });
-            video.srcObject = stream;
-            video.play();
+            video.srcObject = stream; video.play();
         } catch(e) {}
     }
 
@@ -167,13 +167,13 @@
         const c = document.createElement('canvas');
         c.width = video.videoWidth; c.height = video.videoHeight;
         c.getContext('2d').drawImage(video, 0, 0);
-        const optimizedSrc = await downsizeImage(c.toDataURL('image/jpeg', 0.9));
+        const optimizedSrc = await downsizeImage(c.toDataURL('image/jpeg', 0.85));
         const d = new Date();
         photos.push({ src: optimizedSrc, date: `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` });
         document.getElementById('count').innerText = photos.length;
         if (stream) stream.getTracks().forEach(t => t.stop());
         setTimeout(initCam, 100);
-        alert("已擷取");
+        alert("已存入目錄");
     }
 
     async function importPhoto(e) {
@@ -181,8 +181,8 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = async (f) => { 
-            const optimizedSrc = await downsizeImage(f.target.result);
-            photos.push({ src: optimizedSrc, date: "Import" }); 
+            const opt = await downsizeImage(f.target.result);
+            photos.push({ src: opt, date: "Import" }); 
             document.getElementById('count').innerText = photos.length;
             nav('list'); 
         };
@@ -227,7 +227,7 @@
     window.addEventListener('pointerup', e => delete touches[e.pointerId]);
     function updateUI() { wrapper.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.s})`; }
 
-    async function processClipboard(shouldRemoveBg) {
+    async function processClipboard(mode) {
         try {
             const items = await navigator.clipboard.read();
             for (const item of items) {
@@ -240,16 +240,17 @@
                         const ctx = c.getContext('2d');
                         ctx.drawImage(img, 0, 0);
                         
-                        if (shouldRemoveBg) {
+                        if (mode !== 'none') {
                             const id = ctx.getImageData(0,0,c.width,c.height);
                             for(let i=0; i<id.data.length; i+=4) {
-                                // 去背邏輯：亮色背景變透明
+                                // 白色去背 (亮度門檻)
                                 if(id.data[i]>200 && id.data[i+1]>200 && id.data[i+2]>200) {
                                     id.data[i+3]=0;
-                                } else {
-                                    // 轉紅邏輯：非背景部分強制轉為紅色系
+                                } else if (mode === 'both') {
+                                    // 轉為紅色 (中華郵政風)
                                     id.data[i] = 255; id.data[i+1] = 59; id.data[i+2] = 48;
                                 }
+                                // 若 mode 為 'bgOnly'，則只執行去背，不執行變色邏輯
                             }
                             ctx.putImageData(id,0,0);
                         }
