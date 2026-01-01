@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Stamp Pro - Opacity Control</title>
+    <title>Stamp Pro - Fix Preview</title>
     <style>
         :root { --accent: #00ffff; --cx: 50%; --cy: 50%; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
@@ -12,46 +12,54 @@
         .app-container { display: flex; flex-direction: column; height: 100%; position: relative; }
         .top-nav { 
             position: absolute; top: 0; left: 0; right: 0; display: flex; 
-            background: rgba(0,0,0,0.6); padding: 10px; gap: 10px; z-index: 1000; backdrop-filter: blur(10px);
+            background: rgba(0,0,0,0.8); padding: 10px; gap: 10px; z-index: 1000; backdrop-filter: blur(10px);
         }
-        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; font-weight: bold; font-size: 14px; }
+        .nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; font-weight: bold; }
         .nav-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(0,255,255,0.1); }
 
-        .main-content { flex: 1; position: relative; }
-        .page { display: none; width: 100%; height: 100%; position: relative; }
-        .page.active { display: block; }
+        .main-content { flex: 1; position: relative; width: 100%; height: 100%; }
+        .page { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        .page.active { display: flex; flex-direction: column; }
 
-        #cam-stage { width: 100%; height: 100%; background: #000; position: relative; }
-        video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        /* 相機區 */
+        #cam-stage { flex: 1; background: #000; position: relative; overflow: hidden; }
+        video { width: 100%; height: 100%; object-fit: cover; }
         #guide-ring { position: absolute; width: 150px; height: 150px; border: 3px dashed var(--accent); border-radius: 50%; left: var(--cx); top: var(--cy); transform: translate(-50%, -50%); pointer-events: none; z-index: 800; }
 
-        #edit-stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #111; overflow: hidden; }
-        #photo-preview { max-width: 100%; max-height: 100%; object-fit: contain; }
-        #stamp-wrapper { position: absolute; width: 150px; display: none; flex-direction: column; align-items: center; z-index: 900; will-change: transform; opacity: 1; }
-        #stamp-img { width: 100%; height: auto; mix-blend-mode: multiply; pointer-events: none; }
-        .stamp-tag { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(255,255,255,0.8); padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30; text-align: center; }
-
-        /* 透明度滑桿樣式 */
-        .slider-box { padding: 10px 5px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 5px; }
-        .slider-box label { font-size: 12px; display: block; margin-bottom: 5px; color: #aaa; }
-        input[type=range] { width: 100%; height: 8px; border-radius: 5px; background: #444; outline: none; -webkit-appearance: none; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; }
-
-        .bottom-panel { 
-            position: absolute; bottom: 0; left: 0; right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.9)); 
-            padding: 15px 15px calc(20px + env(safe-area-inset-bottom)); 
-            display: flex; align-items: center; justify-content: center; z-index: 1100;
-        }
-        .ctrl-group { display: none; align-items: center; justify-content: space-around; width: 100%; max-width: 400px; }
-        .shutter { width: 75px; height: 75px; background: #ff3b30; border: 5px solid #fff; border-radius: 50%; }
-        .icon-btn { width: 50px; height: 50px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid rgba(255,255,255,0.2); }
+        /* 編輯區修正：確保圖片可見 */
+        #edit-stage { flex: 1; width: 100%; background: #111; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; padding-top: 60px; }
+        #photo-preview { max-width: 95%; max-height: 85%; object-fit: contain; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         
-        .edit-btns { display: none; width: 100%; flex-direction: column; gap: 6px; }
-        .btn { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; font-size: 13px; color: white; }
+        #stamp-wrapper { 
+            position: absolute; width: 150px; display: none; flex-direction: column; align-items: center; 
+            z-index: 900; pointer-events: auto; transform-origin: center center;
+        }
+        #stamp-img { width: 100%; height: auto; mix-blend-mode: multiply; pointer-events: none; }
+        .stamp-tag { color: #ff3b30; font-weight: 900; font-size: 14px; background: rgba(255,255,255,0.85); padding: 2px 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #ff3b30; }
 
-        #result-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        #result-img { max-width: 100%; max-height: 70%; border: 1px solid #444; border-radius: 4px; margin-bottom: 15px; }
+        /* 控制區 */
+        .bottom-panel { 
+            background: #000; padding: 15px 15px calc(20px + env(safe-area-inset-bottom)); 
+            z-index: 1100; border-top: 1px solid #222;
+        }
+        .ctrl-group { display: none; align-items: center; justify-content: space-around; width: 100%; }
+        .shutter { width: 70px; height: 70px; background: #ff3b30; border: 4px solid #fff; border-radius: 50%; }
+        .icon-btn { width: 45px; height: 45px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        
+        .edit-btns { display: none; flex-direction: column; gap: 8px; }
+        .slider-box { padding: 8px; background: #1a1a1a; border-radius: 8px; }
+        .slider-box label { font-size: 11px; color: #888; display: block; margin-bottom: 4px; }
+        input[type=range] { width: 100%; accent-color: var(--accent); }
+
+        .btn-row { display: flex; gap: 6px; }
+        .btn { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; color: white; }
+
+        #list-view { padding: 80px 10px 120px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; height: 100%; overflow-y: auto; }
+        .thumb { background: #222; border-radius: 8px; overflow: hidden; aspect-ratio: 1; border: 1px solid #333; }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        #result-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        #result-img { max-width: 100%; max-height: 80%; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -69,13 +77,15 @@
                 <div id="guide-ring"></div>
             </div>
         </div>
+        
         <div id="page-list" class="page"><div id="list-view"></div></div>
+        
         <div id="page-editor" class="page">
             <div id="edit-stage">
                 <img id="photo-preview">
                 <div id="stamp-wrapper">
                     <img id="stamp-img">
-                    <div class="stamp-tag" id="stamp-label" contenteditable="true">編輯日期地點</div>
+                    <div class="stamp-tag" id="stamp-label" contenteditable="true">編輯地點與日期</div>
                 </div>
             </div>
         </div>
@@ -93,23 +103,23 @@
                 <label>郵戳透明度: <span id="op-val">100</span>%</label>
                 <input type="range" id="opacity-slider" min="10" max="100" value="100" oninput="changeOpacity(this.value)">
             </div>
-            <div style="display:flex; gap:6px;">
+            <div class="btn-row">
                 <button class="btn" style="background:#007b43;" onclick="window.open('https://www.post.gov.tw/post/internet/Philately/index.jsp?ID=508', '_blank')">🇹🇼 台灣</button>
                 <button class="btn" style="background:#ff3b30;" onclick="window.open('https://www.post.japanpost.jp/kitte_hagaki/stamp/fuke/', '_blank')">🇯🇵 日本</button>
             </div>
-            <div style="display:flex; gap:6px;">
+            <div class="btn-row">
                 <button class="btn" style="background:#8e44ad;" onclick="processClipboard('both')">去背+轉紅</button>
-                <button class="btn" style="background:#2980b9;" onclick="processClipboard('bgOnly')">僅去背(留色)</button>
+                <button class="btn" style="background:#2980b9;" onclick="processClipboard('bgOnly')">僅去背</button>
                 <button class="btn" style="background:#444;" onclick="processClipboard('none')">保留原圖</button>
             </div>
-            <button class="btn" style="background:var(--accent); color:#000; font-size:15px;" onclick="saveFinal()">✅ 完成合成照片</button>
+            <button class="btn" style="background:var(--accent); color:#000;" onclick="saveFinal()">✅ 生成合成照片</button>
         </div>
     </div>
 </div>
 
 <div id="result-overlay">
     <img id="result-img">
-    <button class="btn" style="background:#444; width:220px;" onclick="closeResult()">返回目錄</button>
+    <button class="btn" style="background:#333; margin-top:15px; width:200px;" onclick="closeResult()">返回目錄</button>
 </div>
 
 <script>
@@ -137,7 +147,7 @@
                 const canvas = document.createElement('canvas');
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.8));
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
             };
             img.src = dataUrl;
         });
@@ -146,8 +156,8 @@
     async function initCam() {
         if (stream) stream.getTracks().forEach(t => t.stop());
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode, width: { ideal: 1920 } } });
-            video.srcObject = stream; video.play();
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode, width: { ideal: 1280 } } });
+            video.srcObject = stream;
         } catch(e) {}
     }
 
@@ -161,7 +171,6 @@
             document.getElementById('btn-camera').classList.add('active');
             document.getElementById('ctrl-cam').style.display = 'flex';
             document.getElementById('ctrl-edit').style.display = 'none';
-            initCam();
         } else {
             document.getElementById('btn-list').classList.add('active');
             document.getElementById('ctrl-cam').style.display = 'none';
@@ -179,13 +188,11 @@
         const c = document.createElement('canvas');
         c.width = video.videoWidth; c.height = video.videoHeight;
         c.getContext('2d').drawImage(video, 0, 0);
-        const optimizedSrc = await downsizeImage(c.toDataURL('image/jpeg', 0.85));
+        const opt = await downsizeImage(c.toDataURL('image/jpeg', 0.85));
         const d = new Date();
-        photos.push({ src: optimizedSrc, date: `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` });
+        photos.push({ src: opt, date: `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` });
         document.getElementById('count').innerText = photos.length;
-        if (stream) stream.getTracks().forEach(t => t.stop());
-        setTimeout(initCam, 100);
-        alert("已存入目錄");
+        alert("已擷取至目錄");
     }
 
     async function importPhoto(e) {
@@ -206,21 +213,29 @@
         lv.innerHTML = photos.map((p, i) => `<div class="thumb" onclick="goEdit(${i})"><img src="${p.src}"></div>`).join('');
     }
 
+    // 修正：進入編輯模式時的預覽邏輯
     function goEdit(i) {
         activeIdx = i;
-        document.getElementById('photo-preview').src = photos[i].src;
-        document.getElementById('stamp-label').innerText = `地點 ${photos[i].date}`;
-        state.x = 0; state.y = 0; state.s = 1; state.alpha = 1;
-        document.getElementById('opacity-slider').value = 100;
-        document.getElementById('op-val').innerText = 100;
-        wrapper.style.display = 'flex';
-        wrapper.style.opacity = 1;
-        updateUI();
+        const preview = document.getElementById('photo-preview');
+        // 先切換頁面顯示，讓瀏覽器能正確計算 layout
         nav('editor');
+        
+        // 延遲一點點確保 display: block 生效後再載入圖片
+        setTimeout(() => {
+            preview.src = photos[i].src;
+            document.getElementById('stamp-label').innerText = `地點 ${photos[i].date}`;
+            state.x = 0; state.y = 0; state.s = 1; state.alpha = 1;
+            document.getElementById('opacity-slider').value = 100;
+            document.getElementById('op-val').innerText = 100;
+            wrapper.style.display = 'flex';
+            wrapper.style.opacity = 1;
+            updateUI();
+        }, 50);
     }
 
+    // 手勢操作修正
     wrapper.addEventListener('pointerdown', e => {
-        e.preventDefault(); touches[e.pointerId] = e;
+        touches[e.pointerId] = e;
         if (Object.keys(touches).length === 2) {
             const keys = Object.keys(touches);
             initialDist = Math.hypot(touches[keys[0]].clientX - touches[keys[1]].clientX, touches[keys[0]].clientY - touches[keys[1]].clientY);
@@ -257,8 +272,8 @@
                         if (mode !== 'none') {
                             const id = ctx.getImageData(0,0,c.width,c.height);
                             for(let i=0; i<id.data.length; i+=4) {
-                                if(id.data[i]>200 && id.data[i+1]>200 && id.data[i+2]>200) id.data[i+3]=0;
-                                else if (mode === 'both') { id.data[i] = 255; id.data[i+1] = 59; id.data[i+2] = 48; }
+                                if(id.data[i]>210 && id.data[i+1]>210 && id.data[i+2]>210) id.data[i+3]=0;
+                                else if (mode === 'both') { id.data[i]=255; id.data[i+1]=59; id.data[i+2]=48; }
                             }
                             ctx.putImageData(id,0,0);
                         }
@@ -267,7 +282,7 @@
                     img.src = URL.createObjectURL(blob);
                 }
             }
-        } catch(e) { alert("請先複製郵戳圖案"); }
+        } catch(e) { alert("請先複製郵戳"); }
     }
 
     function saveFinal() {
@@ -285,7 +300,7 @@
         const finalScale = (wRect.width / pRect.width) * canvas.width;
         
         ctx.save();
-        ctx.globalAlpha = state.alpha; // 套用透明度到最終合成
+        ctx.globalAlpha = state.alpha;
         ctx.translate(canvas.width * centerX, canvas.height * centerY);
         ctx.drawImage(stamp, -finalScale/2, -finalScale/2, finalScale, finalScale);
         ctx.fillStyle = "#ff3b30";
